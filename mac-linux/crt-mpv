@@ -1,0 +1,5 @@
+#!/bin/sh
+# CRT-mpv launcher (macOS / Linux).  Usage: mac-linux/crt-mpv video.mkv   (add --no-fullscreen for a window)
+root="$(cd "$(dirname "$0")/.." && pwd)"
+PATH="$PATH:/opt/homebrew/bin:/usr/local/bin:/snap/bin:/var/lib/flatpak/exports/bin"
+exec "${CRT_MPV:-mpv}" --config-dir="$root/config" --fullscreen "$@"

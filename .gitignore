@@ -1,0 +1,14 @@
+# downloaded by tools/install.ps1 / mac-linux/install.sh (not redistributed here - see README "Credits & licenses")
+/mpv/
+config/scripts/modernz.lua
+config/scripts/autoload.lua
+config/fonts/*.ttf
+config/overlays/*.png
+# per-machine state
+config/watch_later/
+config/cache/
+config/*.log
+*.log
+.cache/
+/CRT-mpv.exe
+config/settings.json
