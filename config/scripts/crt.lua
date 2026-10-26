@@ -15,6 +15,11 @@ local dir = mp.command_native({"expand-path", "~~/overlays"})
 local f = io.open(dir .. "/tvs.json", "rb")
 local tvs = f and utils.parse_json(f:read("*a")) or {}
 if f then f:close() end
+-- leave out TVs whose picture is missing (a failed download, or a tvs.json entry without its .png)
+for i = #tvs, 1, -1 do
+    local png = io.open(dir .. "/" .. tvs[i].name .. ".png", "rb")
+    if png then png:close() else mp.msg.warn("TV picture missing, skipped: " .. tvs[i].name); table.remove(tvs, i) end
+end
 
 local BASE_W, BASE_H = 1920, 1080   -- canvas size, set from the desktop resolution (canvas_size below)
 
@@ -37,6 +42,13 @@ local wanted = mp.get_opt("crt-tv") or saved.tv or "Generic_White_TV"
 for i, t in ipairs(tvs) do
     if t.name == wanted then idx = i end
 end
+
+-- 16:9 mode: TV up/down only steps through the widescreen TVs (or, when off, only the 4:3 ones). A TV counts
+-- as widescreen from the shape of its screen rectangle (the canvas is 16:9, so scale the fractions back to pixels).
+local function is_wide(t) return t and (t.r - t.l) * 16 > (t.b - t.t) * 9 * 1.6 end
+local wide = is_wide(tvs[idx]) or false
+local last_tv = { [true] = saved.tv_wide, [false] = saved.tv_43 }   -- the TV last used in each mode
+if tvs[idx] then last_tv[wide] = tvs[idx].name end
 
 local P = { scan = 0.35, lines = 240, curve = 0.30, mask = 0.12, vig = 0.30, glow = 0.25, shine = tonumber(mp.get_opt("crt-shine")) or 0.30,
            bezel = tonumber(mp.get_opt("crt-bezel-glow")) or 0.65,
@@ -207,6 +219,7 @@ end
 local function publish()
     pcall(mp.set_property_native, "user-data/crt", {
         tv = tvs[idx] and tvs[idx].name or "", frame = overlay_on, crt = crt_on,
+        wide = wide, tv_wide = last_tv[true], tv_43 = last_tv[false],
         scan = P.scan, curve = P.curve, lines = P.lines, mask = P.mask, vig = P.vig, glow = P.glow, shine = P.shine, bezel = P.bezel, noise = P.noise, ntsc = P.ntsc, contrast = P.contrast, saturation = P.saturation, track = P.track,
         preset = select(2, current_preset()), preset_n = (current_preset()),
         slots = slots,
@@ -235,16 +248,54 @@ end
 
 local power_going = false
 
+-- show TV i, keeping 16:9 mode in step with it and remembering it as the last TV of its kind
+local function show_tv(i, msg)
+    idx = i; wide = is_wide(tvs[idx]) or false; last_tv[wide] = tvs[idx].name
+    overlay_on = true; apply(); static_burst(0.6); say(msg or ("TV: " .. tvs[idx].name)); publish()
+end
+
+-- the next TV in direction dir (1 or -1) of the current mode; every TV if that mode has none
+local function step_tv(dir)
+    local any = false
+    for _, t in ipairs(tvs) do if (is_wide(t) or false) == wide then any = true; break end end
+    local i = idx
+    for _ = 1, #tvs do
+        i = (i - 1 + dir) % #tvs + 1
+        if not any or (is_wide(tvs[i]) or false) == wide then return i end
+    end
+    return idx
+end
+
+-- 16:9 mode on or off: go back to the TV last used in that mode, else the one whose screen is closest to 16:9 / 4:3
+local function set_wide(want)
+    if want == wide then say(want and "Already on the 16:9 TVs" or "Already on the 4:3 TVs"); return end
+    local first, best
+    local target = want and 16 / 9 or 4 / 3
+    for i, t in ipairs(tvs) do
+        if (is_wide(t) or false) == want then
+            if t.name == last_tv[want] then first = i; break end
+            local off = math.abs((t.r - t.l) * 16 / ((t.b - t.t) * 9) - target)
+            if not best or off < best then first, best = i, off end
+        end
+    end
+    if not first then say(want and "No 16:9 TVs installed" or "No 4:3 TVs installed"); return end
+    show_tv(first, (want and "16:9 TVs: " or "4:3 TVs: ") .. tvs[first].name)
+end
+
 -- every action is reachable from a key, from the on-screen remote (script-message crt-do <name>)
 local actions = {
     tv_next = function()
         if #tvs == 0 then return end
-        idx = idx % #tvs + 1; overlay_on = true; apply(); static_burst(0.6); say("TV: " .. tvs[idx].name); publish()
+        show_tv(step_tv(1))
     end,
     tv_prev = function()
         if #tvs == 0 then return end
-        idx = (idx - 2) % #tvs + 1; overlay_on = true; apply(); static_burst(0.6); say("TV: " .. tvs[idx].name); publish()
+        show_tv(step_tv(-1))
     end,
+    -- the remote's 16:9 key and `w`: switch to the widescreen TVs (back to the last one used) or to the 4:3 TVs
+    wide = function() set_wide(not wide) end,
+    wide_on = function() set_wide(true) end,
+    wide_off = function() set_wide(false) end,
     -- VHS tracking: 0 is a perfectly tuned tape; either way off adds a rolling noise band, torn lines and
     -- head-switching noise at the bottom, the way a mistuned VCR looks
     track_up   = function() track_by(0.05) end,
@@ -308,7 +359,9 @@ for n = 1, NSLOTS do
         for k, v in pairs(vals) do if k ~= "tv" then P[k] = v end end
         if custom and vals.tv then
             for i, t in ipairs(tvs) do
-                if t.name == vals.tv and i ~= idx then idx = i; apply() end
+                if t.name == vals.tv and i ~= idx then
+                    idx = i; wide = is_wide(t) or false; last_tv[wide] = t.name; apply()
+                end
             end
         end
         push_opts(); say((custom and "Saved preset " .. n or "Preset: " .. pr[1])); publish()
@@ -335,6 +388,7 @@ end)
 
 mp.add_key_binding("t", "crt-next-tv", actions.tv_next)
 mp.add_key_binding("T", "crt-prev-tv", actions.tv_prev)
+mp.add_key_binding("w", "crt-toggle-wide", actions.wide)
 mp.add_key_binding("o", "crt-toggle-tv", actions.frame)
 mp.add_key_binding("c", "crt-toggle-crt", actions.crt)
 mp.add_key_binding("]", "crt-scan-up",    actions.scan_up,    {repeatable = true})

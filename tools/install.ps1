@@ -70,8 +70,8 @@ Get-Verified 'https://github.com/Samillion/ModernZ/releases/download/v0.3.3/mode
 Get-Verified 'https://raw.githubusercontent.com/mpv-player/mpv/867990d949e9ad99406e0f26e5528e95046b30a7/TOOLS/lua/autoload.lua' `
              '5d2f5491edf1c9857932a4fd816413651d110345e7e57b5ad915f74fb4d516ca' (Join-Path $root 'config\scripts\autoload.lua')
 
-# --- TV pictures (Soqueroeu TV Backgrounds, via the VLC plugin repo, pinned commit) ---
-Write-Host '[3/4] TV pictures'
+# --- TV pictures: the first 15 (Soqueroeu TV Backgrounds) via the VLC plugin repo, pinned commit ---
+Write-Host '[3/4] TV pictures (54)'
 $ovBase = 'https://raw.githubusercontent.com/itsdunintime104/VLC-CRT-emulator-plugin/603a77752cd78d091389072e6ad61f86086cd31f/overlays'
 $tvs = [ordered]@{
     'G02_Generic_TV.png' = '9402db8d7fd2824496885244f7e1c163db168a40da3ff2821d110764fb85150d'
@@ -92,6 +92,55 @@ $tvs = [ordered]@{
 }
 foreach ($n in $tvs.Keys) {
     Get-Verified "$ovBase/$n" $tvs[$n] (Join-Path $root "config\overlays\$n")
+}
+# More TVs, from the artists' own repositories (pinned commits): Soqueroeu's TV Backgrounds V2.0, and Duimon's
+# Mega Bezel 'Potato' and Vintage TV pictures (complete pictures with the screen already cut out; CC BY-NC-ND 4.0).
+$soq  = 'https://raw.githubusercontent.com/soqueroeu/Soqueroeu-TV-Backgrounds_V2.0/52bc4588d88c7bd319f922659d3ba74ed81ce959/img'
+$duiP = 'https://raw.githubusercontent.com/Duimon/Duimon-Mega-Bezel-Potato/9b9b3d781c077bbce6ced712565e96155d1063cd/Graphics/_Potato'
+$duiV = 'https://raw.githubusercontent.com/Duimon/Duimon-Vintage-TV/28478a2bcb21416c619dd2fa2d67d70d91c715dc/Graphics/_Potato'
+$more = @(
+    @('Atari_2600',                   "$soq/Atari_2600/Atari_2600.png", '436c59535627c9009259e2cc9e375c8548589412d439d0348552d6e0ba4c7ef4'),
+    @('Duimon_9519',                  "$duiV/9519/9519.png", '5c19a8aa56166d433edb86db93bc73faec87163ad6778ae62e9774897fabb880'),
+    @('Duimon_9519_3DS',              "$duiV/9519/9519_3DS.png", 'a09fa8977f44bdfe33249132176cc00c201a5b464b403b786d8342a7c8eeca92'),
+    @('Duimon_9519_NDS',              "$duiV/9519/9519_NDS.png", '304c23934f75247dfa06f8b44d90087faaedf638e625b56e03d21ef04fabc34c'),
+    @('Duimon_Ambassador_26',         "$duiV/Ambassador_26/Ambassador_26.png", 'c5a9f84153aaf11733781e45de26f87887064bf2afde9a245bf51bb04f8acb84'),
+    @('Duimon_Ambassador_26_XL',      "$duiV/Ambassador_26/Ambassador_26_Scaled.png", '259f18d3e9afd7e0d326285c088f69e3d9eafd7d6bdbf7582c3e90c9c18422dc'),
+    @('Duimon_GJR641PR',              "$duiV/GJR641PR/GJR641PR.png", '47acd2ade90953534790a9f250855841de79d6d4fe6b768e05b4e19d0ee1eea5'),
+    @('Duimon_TH20B8',                "$duiV/TH20-B8/TH20-B8.png", '7c1032f54ad98f624fad5e06eabdb2db1cacacbc42b111fe7a03d4ed62ce8525'),
+    @('Duimon_TH20B8_Alt',            "$duiV/TH20-B8/TH20-B8_Alt.png", '8b5fa6c657f9e9622f150cb4a57a76050480dfb276e3a74d42b27c39bab5147b'),
+    @('Duimon_TV7',                   "$duiP/TV/TV7_16x9.png", '36744713d4b1a5236e8eb87400f863a27917f18a607ff7a2fb0fdaa8effe53d5'),
+    @('Duimon_TV7_Wood',              "$duiP/TV/TV7_Wood_16x9.png", '3a52ee1d8c62a6534019030280fad9149666ad4e90cfa044b35c81a2ec32b0a8'),
+    @('Generic_CRT_Monitor_2',        "$soq/_Generic/G03B.png", '52d41bed1f05effe548b199f0d4c1d1795489841bab60057f58ab4779d4fd6e0'),
+    @('NEC_PCEngine',                 "$soq/NEC_PCEngine/PCE.png", '4185af4d7edce7a2f228087e6b0ec90d5fe5b6b5486d76bf2ece79f07437d0e8'),
+    @('NEC_PCEngine_CD',              "$soq/NEC_PCEngine-CD/PCECD.png", '1afa8e7c5d319a07791390675177c9bf16e8cc0ffa1124d5661048882a660cdd'),
+    @('NEC_PCEngine_CD_v2',           "$soq/NEC_PCEngine-CD/PCECD_v2.png", '1298f95ca5544cac58207f74cc5593f18208fe26d37aab9ea7f941ed870ea8b1'),
+    @('NEC_PCEngine_Duo',             "$soq/NEC_PCEngine-Duo/PCEDuo.png", '55798df9e0851bded1fed1e1ab0928049b667ca65443970a88cb44f907ef0e1b'),
+    @('NEC_PCEngine_v2',              "$soq/NEC_PCEngine/PCE_v2.png", '0d8c9bec8be4d83ef6a69ba8c963440e5806b80ca5f9afeb9f49372561d5f3bd'),
+    @('NEC_PCFX',                     "$soq/NEC_PCFX/PCFX.png", 'ee9a96eabd492a400f553d6e3e32a12930fc6b9707e3293798bb307f3726a416'),
+    @('NEC_SuperGrafx',               "$soq/NEC_SuperGrafx/SuperGFX.png", '58b90eeb819d00978f0fe40af96a9d7e988821c330cf036a2c5700e192a9991d'),
+    @('NEC_TurboDuo',                 "$soq/NEC_TurboDuo/TurboDuo.png", '5a252b48a8ea538d3bdbceb2570428c18c19c645d6fa565145e5a950d0d4e273'),
+    @('NEC_TurboGrafx16',             "$soq/NEC_TurboGrafx16/TG16.png", 'af1d286e716637c3f3e3e0b52bcd01384dc955aa2214b826528855e2705f7041'),
+    @('NEC_TurboGrafx_CD',            "$soq/NEC_TurboGrafx-CD/TGFX16CD.png", '87970257667f34f892c6295d0a802c1f636864bf419122a481bffd4f2a739743'),
+    @('Nintendo_Famicom_Black',       "$soq/Nintendo_Famicom/Famicom_Black_Edition.png", 'd8f084c05f4763ee47e17a31e86f600a5268194c173393ecfac826b223117504'),
+    @('Nintendo_Famicom_Disk_System', "$soq/Nintendo_Famicom/Famicom_Disk_System.png", '027d007f3ebab0901cb8a4d93dc0adba19b41645a73f4647681114656aff8ce6'),
+    @('Nintendo_Famicom_Red',         "$soq/Nintendo_Famicom/Famicom_Red_Edition.png", 'e439be3ba396ae98da0c0c7bdd3cd54295ac414c90bf09b830cbaf6511c44ec3'),
+    @('Nintendo_GameCube',            "$soq/Nintendo_GameCube/GameCube.png", '523ee9e99ed56f88fe850f728dcd4d2a25e6b17b4f769314034c7166e5cbeffd'),
+    @('Nintendo_NES_Black',           "$soq/Nintendo_NES/NES_Black_Edition.png", '23fc86483b5ca74da163b1e35f798a7259fdbfe3958e47d6ae8b31e4373f40b5'),
+    @('Nintendo_SNES_v2',             "$soq/Nintendo_SuperNintendo/SuperNES_V2.png", 'b4335065f98140c2f3faf0d6ee8ec8d8881fd26958a87aa9f04f20c5aa4ea249'),
+    @('Nintendo_SNES_v3',             "$soq/Nintendo_SuperNintendo/SuperNES_V3.png", '85bcf79694b73da2dc87d89341cd9c985f4270f1ef5d9131f85504604857654f'),
+    @('Nintendo_SuperFamicom',        "$soq/Nintendo_SuperFamicom/SuperFamicom.png", 'b61324925746dd408c2257dfc12ea703c0c24fde4e12bd4b3b0157babcc9ffd2'),
+    @('Nintendo_SuperFamicom_v2',     "$soq/Nintendo_SuperFamicom/SuperFamicom_v2.png", '4038b23b9089a163da3a69421ef8de1161c9e1b9d2e0f2f460d33f6ceea05845'),
+    @('Nintendo_SuperGameBoy',        "$soq/Nintendo_SuperGameBoy/SuperGameBoy.png", 'dcd86c48324c6a3ead0bf3a9ed5d1c2a62bf7bbabd0a99c33a10d6167ce7f647'),
+    @('Nintendo_Wii',                 "$soq/Nintendo_Wii/Wii_4x3.png", '4021acdc0e896feae1f10fed0d403fb6ec70e4347d5b3df0de07416794479441'),
+    @('Nintendo_Wii_16x9',            "$soq/Nintendo_Wii/Wii_16x9.png", '82f7581bb04157232b6164c35c3ef8c29babe1ad38f69bbe8945ae84966f5c1b'),
+    @('Panasonic_3DO',                "$soq/3DO/3DO.png", '0d624722e284f80dd015a36eaea7d8a8df04893df564aceb481a4d19927cca10'),
+    @('Sega_CD',                      "$soq/Sega_CD/Sega_CD.png", 'f143c31c42dfbf910a1818ee64e1c08fe83900ce50edfd2654c20980155936fd'),
+    @('Sega_MarkIII',                 "$soq/Sega_MarkIII/MarkIII.png", '2187d592f303682aa47b36042d9f7c5659361b683f758fc8e86d79281a5eafc5'),
+    @('Sega_SG1000',                  "$soq/Sega_SG-1000/SG-1000.png", 'cbe76481dc853d364f983b6b9db9c3bda7e3b2b5e80a04004acec44c1deb9457'),
+    @('Sega_Saturn',                  "$soq/Sega_Saturn/Sega_SaturnJP.png", 'a3da1e6f16ba32e1ba832542fa338d8c519c48e4fb98565d77cd3d5a81d3d3e2')
+)
+foreach ($t in $more) {
+    Get-Verified $t[1] $t[2] (Join-Path $root "config\overlays\$($t[0]).png")
 }
 
 Write-Host '[4/4] launcher'

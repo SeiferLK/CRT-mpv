@@ -5,7 +5,7 @@
 local mp = require 'mp'
 local msg = require 'mp.msg'
 
-local DW, DH = 330, 966          -- design size of the remote (scaled to the window)
+local DW, DH = 330, 966         -- design size of the remote (scaled to the window)
 package.path = mp.command_native({"expand-path", "~~/script-modules/"}) .. "/?.lua;" .. package.path   -- shared helper modules
 local open = false
 local hover, pressed = nil, nil
@@ -13,6 +13,7 @@ local sel = 1                                -- which setting the adjustment pan
 local ir, ir_timer = false, nil          -- the red IR window flashes while a button is pressed
 local IR_HOLD = mp.get_opt("crt-remote-test") and 2.0 or 0.18
 local st = {}                    -- state published by crt.lua (user-data/crt)
+local upd = {}                   -- published by update.lua (user-data/crt-update): available = newer release tag
 local pl = { pause = false, mute = false, volume = 100, sub = false, audio = true, speed = 1, fs = false, loop = false,
             has_sub = false, audio_n = 0 }
 local overlay = mp.create_osd_overlay("ass-events")
@@ -272,6 +273,20 @@ local TV_NAMES = {
     Nintendo_NES = "NES", Nintendo_SNES = "SNES", Nintendo_N64 = "N64", Nintendo_Famicom = "FAMICOM",
     Sega_Genesis = "GENESIS", Sega_MasterSystem = "MASTER SYSTEM", Sega_Dreamcast = "DREAMCAST",
     SNK_NeoGeo = "NEO GEO", Sony_PlayStation = "PLAYSTATION", Sony_PS2 = "PS2",
+    Generic_CRT_Monitor_2 = "CRT MONITOR 2", Atari_2600 = "ATARI 2600", Panasonic_3DO = "3DO",
+    NEC_PCEngine = "PC ENGINE", NEC_PCEngine_v2 = "PC ENGINE V2", NEC_PCEngine_CD = "PC ENGINE CD",
+    NEC_PCEngine_CD_v2 = "PCE CD V2", NEC_PCEngine_Duo = "PCE DUO", NEC_PCFX = "PC-FX",
+    NEC_SuperGrafx = "SUPERGRAFX", NEC_TurboDuo = "TURBODUO", NEC_TurboGrafx16 = "TURBOGRAFX-16",
+    NEC_TurboGrafx_CD = "TURBOGRAFX CD", Nintendo_Famicom_Black = "FAMICOM BLACK",
+    Nintendo_Famicom_Red = "FAMICOM RED", Nintendo_Famicom_Disk_System = "FAMICOM DISK",
+    Nintendo_NES_Black = "NES BLACK", Nintendo_SNES_v2 = "SNES V2", Nintendo_SNES_v3 = "SNES V3",
+    Nintendo_SuperFamicom = "SUPER FAMICOM", Nintendo_SuperFamicom_v2 = "SUPER FAMI V2",
+    Nintendo_SuperGameBoy = "SUPER GAMEBOY", Nintendo_GameCube = "GAMECUBE", Nintendo_Wii = "WII",
+    Nintendo_Wii_16x9 = "WII 16X9", Sega_MarkIII = "MARK III", Sega_SG1000 = "SG-1000",
+    Sega_CD = "SEGA CD", Sega_Saturn = "SATURN",
+    Duimon_TV7 = "TV7", Duimon_TV7_Wood = "TV7 WOOD", Duimon_9519 = "9519", Duimon_9519_3DS = "9519 3DS",
+    Duimon_9519_NDS = "9519 NDS", Duimon_Ambassador_26 = "AMBASSADOR 26", Duimon_Ambassador_26_XL = "AMBASSADOR XL",
+    Duimon_GJR641PR = "GJR641PR", Duimon_TH20B8 = "TH20-B8", Duimon_TH20B8_Alt = "TH20-B8 ALT",
 }
 
 local COLS = 13                      -- characters per display row
@@ -453,18 +468,24 @@ local function build()
     key { id = "adj_up", x = 175, y = py + 106, w = 135, h = 48, icon = "plus", is = 18, rep = true,
           action = function() mp.commandv("script-message", "crt-do", cur[6]) end }
 
-    local function small(i, y, id, label, act, rep, led, disabled)
-        key { id = id, x = 20 + (i - 1) * 75, y = y, w = 65, h = 42, label = label, fs = 12, action = act, rep = rep, led = led, disabled = disabled }
+    -- two rows of five, in line with the transport keys
+    local function small(i, y, id, label, act, rep, led, disabled, fs, labelcol)
+        key { id = id, x = 21 + (i - 1) * 59, y = y, w = 52, h = 42, label = label, fs = fs or 12, action = act, rep = rep,
+              led = led, disabled = disabled, labelcol = labelcol }
     end
     small(1, 836, "sub", "SUBS", cmd("cycle", "sub"), nil, pl.sub, not pl.has_sub)
-    key { id = "aud", x = 95, y = 836, w = 65, h = 42, label = "LANG", fs = 12,
-          disabled = pl.audio_n < 2, action = next_audio }
+    small(2, 836, "aud", "LANG", next_audio, nil, nil, pl.audio_n < 2)
     small(3, 836, "slow", "SLOW", cmd("add", "speed", -0.25), true)
     small(4, 836, "fast", "FAST", cmd("add", "speed", 0.25), true)
+    -- 16:9: TV up/down then only steps through the widescreen TVs (lit), otherwise only the 4:3 ones
+    small(5, 836, "wide", "16:9", crt("wide"), nil, st.wide == true)
     small(1, 886, "full", "FULL", cmd("cycle", "fullscreen"), nil, pl.fs)
     small(2, 886, "loop", "LOOP", cmd("cycle-values", "loop-file", "inf", "no"), nil, pl.loop)
     small(3, 886, "shot", "SHOT", cmd("screenshot"))
     small(4, 886, "list", "LIST", cmd("script-binding", "select/select-playlist"))
+    -- check GitHub for a newer CRT-mpv now (orange when one is already known to be out)
+    small(5, 886, "update", "UPDATE", function() mp.commandv("script-message", "crt-update-check") end, nil, nil, nil, 10,
+          upd.available and C.accent or nil)
 
     -- maker's mark engraved into the body under the last row; clicking it opens the website
     do
@@ -638,6 +659,7 @@ mp.observe_property("mouse-pos", "native", function(_, m)
 end)
 
 mp.observe_property("user-data/crt", "native", function(_, v) st = v or {}; render() end)
+mp.observe_property("user-data/crt-update", "native", function(_, v) upd = type(v) == "table" and v or {}; render() end)
 mp.observe_property("pause", "bool", function(_, v) pl.pause = v and true or false; render() end)
 mp.observe_property("mute", "bool", function(_, v) pl.mute = v and true or false; render() end)
 mp.observe_property("volume", "number", function(_, v) pl.volume = v or 100; render() end)

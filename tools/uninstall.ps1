@@ -37,7 +37,15 @@ if ($RemoveFolder) {
 Write-Host '[2/3] downloaded and built files'
 $tvs = 'G02_Generic_TV','Generic_CRT_Monitor','Generic_Flat_TV','Generic_Gray_TV','Generic_White_TV',
        'Nintendo_Famicom','Nintendo_N64','Nintendo_NES','Nintendo_SNES','SNK_NeoGeo','Sega_Dreamcast',
-       'Sega_Genesis','Sega_MasterSystem','Sony_PS2','Sony_PlayStation'
+       'Sega_Genesis','Sega_MasterSystem','Sony_PS2','Sony_PlayStation',
+       'Atari_2600','Duimon_9519','Duimon_9519_3DS','Duimon_9519_NDS','Duimon_Ambassador_26',
+       'Duimon_Ambassador_26_XL','Duimon_GJR641PR','Duimon_TH20B8','Duimon_TH20B8_Alt','Duimon_TV7',
+       'Duimon_TV7_Wood','Generic_CRT_Monitor_2','NEC_PCEngine','NEC_PCEngine_CD','NEC_PCEngine_CD_v2',
+       'NEC_PCEngine_Duo','NEC_PCEngine_v2','NEC_PCFX','NEC_SuperGrafx','NEC_TurboDuo','NEC_TurboGrafx16',
+       'NEC_TurboGrafx_CD','Nintendo_Famicom_Black','Nintendo_Famicom_Disk_System','Nintendo_Famicom_Red',
+       'Nintendo_GameCube','Nintendo_NES_Black','Nintendo_SNES_v2','Nintendo_SNES_v3','Nintendo_SuperFamicom',
+       'Nintendo_SuperFamicom_v2','Nintendo_SuperGameBoy','Nintendo_Wii','Nintendo_Wii_16x9','Panasonic_3DO',
+       'Sega_CD','Sega_MarkIII','Sega_SG1000','Sega_Saturn'
 $paths = @('mpv', 'CRT-mpv.exe', '.cache', 'config\scripts\modernz.lua', 'config\scripts\autoload.lua',
            'config\fonts\modernz-icons.ttf') + ($tvs | ForEach-Object { "config\overlays\$_.png" })
 foreach ($p in $paths) { Remove-Item (Join-Path $root $p) -Recurse -Force -ErrorAction SilentlyContinue }
@@ -45,7 +53,8 @@ $fonts = Join-Path $root 'config\fonts'            # created by the installer; k
 if ((Test-Path $fonts) -and -not (Get-ChildItem $fonts -Force)) { Remove-Item $fonts }
 
 Write-Host '[3/3] saved settings, resume positions, shader cache and logs'
-foreach ($p in 'config\settings.json', 'config\watch_later', 'config\cache', 'config\*.log', '*.log') {
+foreach ($p in 'config\settings.json', 'config\update.json', 'config\watch_later', 'config\cache', 'config\*.log', '*.log',
+               'backup', '.update-manifest') {
     Remove-Item (Join-Path $root $p) -Recurse -Force -ErrorAction SilentlyContinue
 }
 

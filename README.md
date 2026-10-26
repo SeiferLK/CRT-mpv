@@ -1,9 +1,10 @@
 # CRT-mpv
 
 Watch any video on a real retro CRT television: curved glass, scanlines, phosphor mask, analog noise,
-NTSC signal bleed and a glass reflection, inside a full TV set (a Nintendo, a Dreamcast, a Neo Geo and 12 more),
-all rendered at your screen's **full resolution** in [mpv](https://mpv.io). It comes with VLC-style hover controls
-and a clickable, hand-drawn **TV remote** on the screen that controls everything.
+NTSC signal bleed and a glass reflection, inside a full TV set (54 of them: Nintendo, Sega, NEC, Sony and SNK sets,
+widescreen 16:9 TVs and 1970s wood-cabinet consoles), all rendered at your screen's **full resolution** in
+[mpv](https://mpv.io). It comes with VLC-style hover controls, a clickable, hand-drawn **TV remote** on the screen
+that controls everything, and it **updates itself** from GitHub when a new version comes out.
 
 ![Preview: a test pattern shown on a CRT TV, with the on-screen remote open beside it](docs/preview.png)
 
@@ -31,6 +32,10 @@ CRT-mpv is free. If you enjoy it, you can support its development on [Ko-fi](htt
 
 *Sony PS2 TV (The X-Files) with the Subtle preset.*
 
+![A widescreen Nintendo Wii 16:9 TV showing a 16:9 test pattern, with the on-screen remote](docs/screenshot-wii-16x9-tv.jpg)
+
+*Widescreen Wii 16:9 TV (ffmpeg's `testsrc2` test pattern). The remote's **16:9** key is lit: the TV keys now step through the widescreen TVs only.*
+
 The video frames in these screenshots belong to their respective rights holders and are shown only to demonstrate the effect. The TV artwork is by Soqueroeu (see [Credits](#credits)).
 
 ## Contents
@@ -38,7 +43,7 @@ The video frames in these screenshots belong to their respective rights holders 
 - [What is new and custom](#what-is-new-and-custom)
 - [Why this exists (and why it isn't a VLC plugin)](#why-this-exists-and-why-it-isnt-a-vlc-plugin)
 - [Install](#install): [Windows](#windows) · [macOS](#macos) · [Linux](#linux) · [Uninstall](#uninstall)
-- [Using it](#using-it) and the [on-screen remote](#on-screen-remote)
+- [Using it](#using-it), the [on-screen remote](#on-screen-remote) and [updates](#updates)
 - [Customising](#customising)
 - [How it works](#how-it-works)
 - [Performance](#performance)
@@ -63,7 +68,7 @@ CRT-mpv started from a VLC plugin, but almost everything you see here is new cod
 - **DEGAUSS button:** a thunk and a fading mains hum (made on the fly, no sound files) while the picture wobbles and colour blotches swirl across the glass.
 - **VHS tracking:** knock it off and a band of torn, noisy lines rolls through the picture, the bottom lines tear sideways and the image judders. Tune it back to centre for a clean picture, like the knob on a VCR.
 - **Contrast and colour** controls, and a **pixel-font MUTE display** drawn by the shader itself, so it curves and glows with the picture like an old TV menu.
-- **15 TVs** (Nintendo, Sega, SNK, Sony, generic) that you can switch with one key, plus a one-line way to add your own.
+- **54 TVs** that you can switch with one key: console-themed sets for Nintendo, Sega, NEC, SNK, Sony, Atari and 3DO, generic sets, **widescreen 16:9 TVs**, and 1970s vintage wood-cabinet consoles. A **16:9** key on the remote (or `w`) switches between the widescreen and the 4:3 TVs, and there is a one-line way to add your own.
 - **Subtitles live inside the TV screen** and go through the CRT shader with the picture, so they get the same curvature, scanlines and glow.
 
 **The controls**
@@ -72,6 +77,7 @@ CRT-mpv started from a VLC plugin, but almost everything you see here is new cod
 - **Everything is remembered**: TV, look, presets, volume, mute and loop come back on the next start, saved on every change and on exit.
 - **VLC-style hover bar** (previous/next, seek, volume, audio and subtitle tracks, speed, playlist, loop, fullscreen) with a seek that previews while you drag and lands on the exact time when you let go.
 - **Folder playlist:** open one episode and the rest of the folder is queued.
+- **Updates itself:** when a new version is released, the player offers it at start-up (or when you press **UPDATE** on the remote), downloads it from GitHub, installs it with your settings kept and starts again on the same episode, at the same spot.
 
 **The engineering**
 - **Light on the CPU:** the TV is composited in planar yuv420 pinned to BT.709 rather than RGBA, which is about 3x cheaper (see [Performance](#performance)).
@@ -111,9 +117,9 @@ All downloads are pinned to exact versions and checked against SHA-256 checksums
 ### Windows
 Windows 10 (1803+) or 11. No admin rights, no Python.
 
-1. Download **CRT-mpv-1.0.0.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
+1. Download **CRT-mpv-1.1.0.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
 2. Double-click **`install.bat`** in that folder.
-   This downloads a portable mpv, the on-screen controls, and the 15 TV pictures into the folder, and adds **CRT-mpv** (with its own icon) to the right-click → *Open with* menu. (If Windows asks whether to run a downloaded file, choose *Run*.)
+   This downloads a portable mpv, the on-screen controls, and the 54 TV pictures into the folder, and adds **CRT-mpv** (with its own icon) to the right-click → *Open with* menu. (If Windows asks whether to run a downloaded file, choose *Run*.)
 3. Play: drag a video onto `CRT-mpv.exe`, or right-click a video → *Open with* → **CRT-mpv**.
    `CRT-mpv.exe --windowed video.mkv` plays in a window. (`tools\play.bat` and `tools\play-windowed.bat` do the same without the launcher.)
    `CRT-mpv.exe` is a small launcher the installer builds on your PC with the C# compiler that comes with Windows; it carries the CRT-mpv icon, which is what Windows shows in the *Open with* menu and on file thumbnails.
@@ -152,7 +158,7 @@ Close CRT-mpv first, then:
 
 This removes the *Open With* entry, including what Windows recorded after you used it (recently used lists, CRT-mpv as the default app for a file type, cached names, "new app" notices, compatibility and usage records, and the audio device remembered for it; only entries for this folder are touched, and `.\tools\unregister-openwith.ps1 -WhatIf` lists them without changing anything); on macOS it removes `~/Applications/CRT-mpv.app`, and on Linux `crt-mpv.desktop` and any default-app choices for it. Everything is per-user, so no admin rights are needed. After that it deletes the folder.
 
-To keep the folder as a fresh copy instead, run `powershell -ExecutionPolicy Bypass -File .\tools\uninstall.ps1` on Windows or `mac-linux/uninstall.sh` on macOS/Linux: the uninstaller then removes only what the installer downloaded or built (mpv, `CRT-mpv.exe`, the controls, the 15 TV pictures) and the player's saved state (remote settings, resume positions, shader cache, logs). TV pictures you added yourself are kept. Run the installer again to reinstall. On macOS and Linux, mpv came from your package manager and is left installed.
+To keep the folder as a fresh copy instead, run `powershell -ExecutionPolicy Bypass -File .\tools\uninstall.ps1` on Windows or `mac-linux/uninstall.sh` on macOS/Linux: the uninstaller then removes only what the installer downloaded or built (mpv, `CRT-mpv.exe`, the controls, the 54 TV pictures) and the player's saved state (remote settings, resume positions, shader cache, logs, the update check and the updater's backups). TV pictures you added yourself are kept. Run the installer again to reinstall. On macOS and Linux, mpv came from your package manager and is left installed.
 
 > mpv needs a build with Lua scripting and ffmpeg's `lavfi` filter (all mainstream packages have both).
 > The launchers run mpv with `--config-dir=<this folder>/config`, so your own `~/.config/mpv` is never touched.
@@ -172,7 +178,8 @@ Opening one video loads the other videos in the same folder as a playlist, so pr
 
 | Key | Action |
 |---|---|
-| `t` / `T` | next / previous TV (15 TVs) |
+| `t` / `T` | next / previous TV (54 TVs; only the 4:3 ones, or only the 16:9 ones in widescreen mode) |
+| `w` | widescreen mode on / off: switch to the 16:9 TVs or back to the 4:3 TVs |
 | `o` | TV frame on / off |
 | `c` | CRT effect on / off |
 | `1`-`6` | factory presets: Subtle, Classic, Heavy, Anime, VHS, Arcade (locked, they can never be overwritten) |
@@ -193,7 +200,7 @@ Opening one video loads the other videos in the same folder as a playlist, so pr
 ### Settings are remembered
 
 Everything you change on the remote is saved when you quit (and a moment after each change, in case the player
-crashes) and restored the next time it starts: the **TV**, TV frame on/off, CRT effect on/off, scanlines, curvature,
+crashes) and restored the next time it starts: the **TV** (and the last 16:9 and 4:3 TV you used), TV frame on/off, CRT effect on/off, scanlines, curvature,
 line count, mask, vignette, glow, reflection, bezel glow, noise, signal mode, VHS tracking and your saved presets 7-9 (so the active preset), **volume**, **mute** and **loop**.
 They are kept in `config/settings.json`. Not remembered: fullscreen, playback speed, and the subtitle and audio-track
 choice (those depend on the video). Delete `config/settings.json` to reset, or add `script-opts-append=crt-settings=no`
@@ -214,10 +221,10 @@ TV remote on the screen. Everything the keyboard can do is on it, with hover and
 | Rockers | **VOL** up/down (hold to repeat) · **TV** next/previous TV · **EP** next/previous episode |
 | Transport | previous · -10 s · play/pause · +10 s · next |
 | Adjustment panel | A single panel instead of a column of buttons: the **◀ ▶** keys pick the setting (**scanlines**, **curvature**, **line count**, **noise**, **signal mode**, **contrast**, **colour**, **glass shine**, **bezel glow**, **VHS tracking**), the orange meter and number show its level (for tracking the meter lights out from the centre), and the large **−** / **+** keys change it (hold to repeat) |
-| Small keys | **SUBS** cycle subtitles · **LANG** switch audio track (language or dub; never switches the sound off, use MUTE for that) · **SLOW** / **FAST** step the playback speed down / up (no light, they are step buttons) · **FULL** fullscreen · **LOOP** · **SHOT** screenshot · **LIST** playlist menu |
+| Small keys | **SUBS** cycle subtitles · **LANG** switch audio track (language or dub; never switches the sound off, use MUTE for that) · **SLOW** / **FAST** step the playback speed down / up (no light, they are step buttons) · **16:9** widescreen mode: lit, the TV keys step through the widescreen TVs only; off, through the 4:3 TVs only · **FULL** fullscreen · **LOOP** · **SHOT** screenshot · **LIST** playlist menu · **UPDATE** check for a new version now (its label turns orange when one is out; see [Updates](#updates)) |
 | Corner | red **x** (or `Esc`) closes the remote |
 
-Keys that are on/off show a small **LED** in their corner: it lights green for CRT (frame and effect both on), mute, subtitles, fullscreen, loop, and the preset that is currently active (**CLASSIC** is lit at start-up; changing a value by hand turns the preset light off). **SUBS** is greyed out when the video has no subtitle track, and **LANG** when it has fewer than two audio tracks.
+Keys that are on/off show a small **LED** in their corner: it lights green for CRT (frame and effect both on), mute, subtitles, widescreen mode (16:9), fullscreen, loop, and the preset that is currently active (**CLASSIC** is lit at start-up; changing a value by hand turns the preset light off). **SUBS** is greyed out when the video has no subtitle track, and **LANG** when it has fewer than two audio tracks.
 
 The remote always opens when the player starts (closing it lasts only for that session); add `script-opts-append=crt-remote-start=no` to `config/mpv.conf` to start with it hidden (`r` or the bar's button opens it).
 
@@ -226,7 +233,30 @@ The keys are drawn as moulded, embossed matte caps (soft shadow, side wall, gent
 The remote is drawn as vector graphics by `config/scripts/remote.lua`, so there is no image to license and it
 scales with the window. While the pointer is over it, clicks go to the remote only (rapid clicks will not toggle fullscreen).
 
-TVs: Generic (Gray, White, CRT Monitor, Flat, "G02") · Nintendo (NES, SNES, N64, Famicom) · Sega (Genesis, Master System, Dreamcast) · SNK Neo Geo · Sony (PlayStation, PS2).
+TVs (54):
+- **Nintendo:** NES, NES Black, Famicom, Famicom Black, Famicom Red, Famicom Disk System, SNES, SNES v2, SNES v3, Super Famicom, Super Famicom v2, Super Game Boy, N64, GameCube, Wii, **Wii 16:9**
+- **Sega:** Master System, Mark III, SG-1000, Genesis, Sega CD, Saturn, Dreamcast · **Sony:** PlayStation, PS2 · **SNK:** Neo Geo · **Atari** 2600 · **Panasonic** 3DO
+- **NEC:** PC Engine, PC Engine v2, PC Engine CD, PC Engine CD v2, PC Engine Duo, PC-FX, SuperGrafx, TurboGrafx-16, TurboGrafx CD, TurboDuo
+- **Generic:** Gray, White, Flat, CRT Monitor, CRT Monitor 2, "G02"
+- **Duimon's sets:** **TV7** and **TV7 Wood** (widescreen 16:9, close-up), and the vintage consoles 9519 (plus 3DS and NDS badges; the 3DS one has a wide 5:3 screen), Ambassador 26, Ambassador XL, GJR641PR, TH20-B8 and TH20-B8 Alt
+
+Widescreen TVs: Wii 16:9, TV7, TV7 Wood and 9519 3DS.
+
+### Updates
+
+A few seconds after the player starts it asks GitHub whether a newer CRT-mpv has been released (at most once an hour). If there is one, the video pauses and a panel shows the new version and what is new, with three buttons:
+
+- **Update now** (or `Enter`): the player saves your place and closes, a small *Updating CRT-mpv* window shows the download, and the new version is installed into the same folder. Then CRT-mpv starts again on the same video at the same spot, and says *Updated to CRT-mpv x.y.z*.
+- **Later** (or `Esc`): asks again next time.
+- **Skip this version** (or `S`): never asks about this version again (a newer one will still be offered).
+
+The **UPDATE** key on the remote checks straight away (even for a version you skipped) and either shows the panel or says you already have the newest version.
+
+What an update keeps: your saved TV and look, presets 7-9, volume, resume positions, the shader cache, mpv itself, and TVs you added yourself (their picture and their line in `tvs.json`). Every file it replaces is copied to `backup\<old version>-<date>\` first (the three newest backups are kept), the download is checked against GitHub's SHA-256 checksum, and if anything goes wrong the old version is put back and the player starts again as it was.
+
+Updating from **1.0.0**: version 1.0.0 does not have the update check yet, so update once by hand: download **CRT-mpv-1.1.0.zip**, copy everything from the `CRT-mpv-1.1.0` folder inside it into your CRT-mpv folder (replace the files when Windows asks), then double-click `install.bat` to fetch the new TVs. Your settings are kept. From 1.1.0 on, updates come to you.
+
+Add `script-opts-append=crt-update=no` to `config/mpv.conf` to turn the check off. On macOS and Linux the same check runs and `mac-linux/update.sh` does the update (untested so far).
 
 ## Customising
 
@@ -262,6 +292,7 @@ script-opts-append=crt-subs-keep-style=yes
 | `crt-animations` | `yes` | `no` turns off the power-on warm-up, the power-off collapse and the static between TVs and episodes, every run. |
 | `crt-sfx` | `yes` | `no` silences the degauss sound, every run. |
 | `crt-window-icon` | `yes` | `no` stops the helper that puts the CRT-mpv icon on the player window (Windows). |
+| `crt-update` | `yes` | `no` turns off update checks, both at start-up and from the remote's UPDATE key. See [Updates](#updates). |
 
 ### The look and the presets
 
@@ -282,7 +313,8 @@ script-opts-append=crt-subs-keep-style=yes
 ### TVs
 
 - **Choosing:** `t` / `T` or the remote's TV rockers step through the TVs. `crt-tv` sets the starting one.
-- **Adding your own:** put a 16:9 PNG (for example 3840x2160, the screen area can be any colour) into `config/overlays/` and add `{"name":"MyTV","l":0.27,"t":0.12,"r":0.73,"b":0.74}` to `config/overlays/tvs.json`, where `name` is the file name without `.png` and `l`/`t`/`r`/`b` are the screen's left, top, right and bottom edges as fractions of the picture (0 to 1). The screen area is cut out automatically when the player loads.
+- **Widescreen and 4:3:** a TV whose screen is wider than about 1.6:1 counts as widescreen. The TV keys step through one kind at a time; the remote's **16:9** key (or `w`) switches between them and goes back to the TV you last used of that kind. The video always keeps its own shape inside the screen: 4:3 shows on a widescreen TV get bars at the sides, 16:9 shows on a 4:3 TV get bars above and below.
+- **Adding your own:** put a 16:9 PNG (for example 3840x2160, the screen area can be any colour, or already transparent) into `config/overlays/` and add `{"name":"MyTV","l":0.27,"t":0.12,"r":0.73,"b":0.74}` to `config/overlays/tvs.json`, where `name` is the file name without `.png` and `l`/`t`/`r`/`b` are the screen's left, top, right and bottom edges as fractions of the picture (0 to 1). The screen area is cut out automatically when the player loads. A TV whose picture file is missing is left out (and noted in the log). TVs you add are kept when CRT-mpv updates.
 - **Resolution:** the TV is composited at the largest 16:9 area that fits your desktop (1920x1080 on a 1080p screen, 2560x1440 on 1440p, 3840x2160 on 4K) and rebuilt if the window moves to a monitor with a different resolution. Bigger displays use more CPU; cap it with `crt-canvas-height`.
 
 ### Subtitles
@@ -319,6 +351,7 @@ script-opts-append=crt-subs-keep-style=yes
 2. `config/shaders/crt.glsl` is an mpv user shader on the `OUTPUT` stage. It sees the final scaled picture at display resolution and applies barrel curvature, scanlines, RGB phosphor mask, glow, vignette, NTSC signal simulation, a glass reflection highlight (soft light in the upper-left plus a diagonal streak and a top-edge glint), analog noise (grain, colour noise, a rolling interference band and line jitter), VHS tracking error and the mute on-screen display **only inside the TV's screen rectangle**, plus the bezel glow just around it (light from the picture, mirrored across the nearest screen edge and blurred more the further it travels) (the script passes the rectangle in as shader parameters). The short animations (warm-up, power-off, channel static, degauss) are shader parameters too: `crt.lua` steps them about 60 times a second while one is playing, and not at all otherwise.
 3. `ModernZ` provides the hover controls; mpv's `autoload.lua` provides the folder playlist.
 4. `config/scripts/settings.lua` and `config/script-modules/crt_settings.lua` save and restore the settings. `config/scripts/remote.lua` draws the on-screen remote with ASS vector graphics and sends CRT actions to `crt.lua` (`script-message crt-do <action>`). `crt.lua` publishes its state (TV, scanlines, curvature, lines) to `user-data/crt` so the remote's display stays in sync.
+5. `config/scripts/update.lua` compares the newest GitHub release with the `VERSION` file and shows the update panel. *Update now* hands over to `tools/update.ps1` (Windows) or `mac-linux/update.sh` (macOS / Linux), which waits for the player to close, downloads the release zip, backs up and replaces the changed files, runs the installer for anything new (TV pictures, controls), rebuilds `CRT-mpv.exe` and starts the player again.
 
 (The TV is part of the video rather than drawn with mpv's `overlay-add` because that layer is always drawn above every on-screen control, which would hide them.)
 
@@ -337,6 +370,8 @@ CRT-mpv composites the TV around the video on the CPU, so it costs more than pla
 - **Windows: `tar` can't extract the `.7z`:** install [7-Zip](https://www.7-zip.org) and re-run the installer.
 - **No remote button on the bar:** the installer patches ModernZ; re-run it (it fails loudly if ModernZ's code ever changes). `r` always opens the remote.
 - **Controls don't appear:** check `config/scripts/modernz.lua` and `config/fonts/modernz-icons.ttf` exist.
+- **A TV is missing from the list:** its picture did not download; double-click `install.bat` again.
+- **An update did not work:** CRT-mpv puts the old version back by itself and tells you. The files it replaced are also in the `backup` folder. You can always update by hand: copy the files from the latest release's zip into your CRT-mpv folder and double-click `install.bat`; your settings are kept.
 
 ---
 
@@ -353,7 +388,8 @@ This project stands on a lot of other people's work. Thank you to:
 - The CRT-mpv icon (`assets/`) is the Retrogrounds mascot artwork, supplied by the repository owner. It is not covered by the GPL (see [Licenses](#licenses)).
 
 **The TV artwork**
-- **Soqueroeu**: [TV Backgrounds V2.0](https://github.com/soqueroeu/Soqueroeu-TV-Backgrounds_V2.0): all 15 TV pictures. The artwork carries **RetroArch** / **Mega Bezel** branding; credit to those projects as well.
+- **Soqueroeu**: [TV Backgrounds V2.0](https://github.com/soqueroeu/Soqueroeu-TV-Backgrounds_V2.0): 44 of the TVs (the original 15, via the VLC plugin's repository, and 29 more, including the widescreen Wii 16:9, downloaded from Soqueroeu's own repository). The artwork carries **RetroArch** / **Mega Bezel** / **LaunchBox** branding; credit to those projects as well.
+- **Duimon**: [Duimon Mega Bezel Potato](https://github.com/Duimon/Duimon-Mega-Bezel-Potato) (the widescreen **TV7** and **TV7 Wood**) and [Duimon Vintage TV](https://github.com/Duimon/Duimon-Vintage-TV) (9519, Ambassador 26, GJR641PR, TH20-B8 and their variants): 10 of the TVs, used unmodified under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).
 
 **The player and its parts**
 - The [**mpv**](https://mpv.io) project and contributors: the player, its scripting API, and `autoload.lua` (folder playlist), which the installer downloads from the mpv repository.
@@ -364,7 +400,7 @@ This project stands on a lot of other people's work. Thank you to:
 ## Licenses
 
 - **CRT-mpv's own code** (the shader, the Lua scripts, the launchers and the installers) is licensed under the [GNU General Public License v3.0](LICENSE). You can use, change and share it, including in your own projects; if you share a changed version, it must stay under the GPL and come with its source. Copyright © 2026 SeiferLK.
-- **Not covered by the GPL:** the CRT-mpv icon in `assets/` (Retrogrounds artwork) and the screenshots in `docs/`, which show Soqueroeu's TV artwork and frames from the shows playing on it.
+- **Not covered by the GPL:** the CRT-mpv icon in `assets/` (Retrogrounds artwork) and the screenshots in `docs/`, which show Soqueroeu's TV artwork and frames from the shows playing on it, and the TV pictures the installer downloads (see below).
 - **Nothing third-party is redistributed in this repository.** The installers download each dependency from its original source at a pinned version and verify its checksum:
 
   | Component | Source | License |
@@ -372,6 +408,10 @@ This project stands on a lot of other people's work. Thank you to:
   | mpv (Windows build) | shinchiro/mpv-winbuild-cmake release 20261021 | GPL/LGPL, see the mpv project |
   | ModernZ + icon font | Samillion/ModernZ v0.3.3 (the installer changes its `info` button into the remote button and appends a hook for CRT-mpv's seek controller) | LGPL-2.1 |
   | `autoload.lua` | mpv-player/mpv @ `867990d` | mpv project's license |
-  | TV pictures | itsdunintime104/VLC-CRT-emulator-plugin @ `603a777` (Soqueroeu's artwork) | Soqueroeu's terms, below |
+  | TV pictures (15) | itsdunintime104/VLC-CRT-emulator-plugin @ `603a777` (Soqueroeu's artwork) | Soqueroeu's terms, below |
+  | TV pictures (29) | soqueroeu/Soqueroeu-TV-Backgrounds_V2.0 @ `52bc458` | Soqueroeu's terms, below |
+  | TV pictures (2) | Duimon/Duimon-Mega-Bezel-Potato @ `9b9b3d7` | CC BY-NC-ND 4.0 |
+  | TV pictures (8) | Duimon/Duimon-Vintage-TV @ `28478a2` | CC BY-NC-ND 4.0 |
 
+- **Duimon's TV artwork** is © Duimon and licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/). CRT-mpv downloads the original files unchanged and only cuts the screen out while it plays; it is free and non-commercial.
 - **TV artwork terms (Soqueroeu):** *"This pack is free. You should not pay for anything related to this graphics pack and shader preset. You may distribute and reproduce part from this content, as long as you give credit to the authors involved. You may not profit from the sale of products that contain material in this package without the author's prior permission."*
