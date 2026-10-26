@@ -137,7 +137,7 @@ local SITE = "https://retrogrounds.com/?utm_source=crt_mpv&utm_medium=app&utm_ca
 local function open_site()
     local plat = mp.get_property("platform") or (package.config:sub(1, 1) == "\\" and "windows" or "linux")
     local args
-    if plat == "windows" then args = { "cmd", "/c", 'start "" "' .. SITE .. '"' }  -- quote &-separated UTM tags for cmd.exe
+    if plat == "windows" then args = { "cmd", "/c", "start", "", (SITE:gsub("&", "^&")) }  -- ^& stops cmd.exe cutting the link at each &
     elseif plat == "darwin" then args = { "open", SITE }
     else args = { "xdg-open", SITE } end
     mp.command_native_async({ name = "subprocess", args = args, playback_only = false, capture_stdout = true, capture_stderr = true },

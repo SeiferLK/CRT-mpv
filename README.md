@@ -117,7 +117,7 @@ All downloads are pinned to exact versions and checked against SHA-256 checksums
 ### Windows
 Windows 10 (1803+) or 11. No admin rights, no Python.
 
-1. Download **CRT-mpv-1.1.2.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
+1. Download **CRT-mpv-1.1.3.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
 2. Double-click **`install.bat`** in that folder.
    This downloads a portable mpv, the on-screen controls, and the 54 TV pictures into the folder, and adds **CRT-mpv** (with its own icon) to the right-click → *Open with* menu. (If Windows asks whether to run a downloaded file, choose *Run*.)
 3. Play: drag a video onto `CRT-mpv.exe`, or right-click a video → *Open with* → **CRT-mpv**.
@@ -254,7 +254,7 @@ The **UPDATE** key on the remote checks straight away (even for a version you sk
 
 What an update keeps: your saved TV and look, presets 7-9, volume, resume positions, the shader cache, mpv itself, and TVs you added yourself (their picture and their line in `tvs.json`). Every file it replaces is copied to `backup\<old version>-<date>\` first (the three newest backups are kept), the download is checked against GitHub's SHA-256 checksum, and if anything goes wrong the old version is put back and the player starts again as it was.
 
-Updating from **1.0.0**: version 1.0.0 does not have the update check yet, so update once by hand: download **CRT-mpv-1.1.2.zip**, copy everything from the `CRT-mpv-1.1.2` folder inside it into your CRT-mpv folder (replace the files when Windows asks), then double-click `install.bat` to fetch the new TVs. Your settings are kept. From 1.1.0 on, updates come to you.
+Updating from **1.0.0**: version 1.0.0 does not have the update check yet, so update once by hand: download **CRT-mpv-1.1.3.zip**, copy everything from the `CRT-mpv-1.1.3` folder inside it into your CRT-mpv folder (replace the files when Windows asks), then double-click `install.bat` to fetch the new TVs. Your settings are kept. From 1.1.0 on, updates come to you.
 
 Add `script-opts-append=crt-update=no` to `config/mpv.conf` to turn the check off. On macOS and Linux the same check runs and `mac-linux/update.sh` does the update (untested so far).
 
