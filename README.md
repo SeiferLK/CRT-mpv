@@ -73,7 +73,7 @@ CRT-mpv started from a VLC plugin, but almost everything you see here is new cod
 
 **The controls**
 - **An on-screen TV remote**, drawn from scratch as vector graphics: moulded, embossed keys that sink when pressed, status LEDs, an orange dot-matrix display, a red IR window that flashes on every press, a DEGAUSS key, and an adjustment panel with a level meter (VHS tracking included). It scales with the window, needs no image files and opens at every start.
-- **Presets:** six locked factory looks (Subtle, Classic, Heavy, Anime, VHS, Arcade) and **three programmable slots** (hold a key to save the TV and every setting into it).
+- **Presets:** six locked factory looks (Subtle, Classic, Heavy, Anime, VHS, Arcade) and **three programmable slots** (hold a key to save every setting of the look into it; the TV is yours to pick separately).
 - **Everything is remembered**: TV, look, presets, volume, mute and loop come back on the next start, saved on every change and on exit.
 - **VLC-style hover bar** (previous/next, seek, volume, audio and subtitle tracks, speed, playlist, loop, fullscreen) with a seek that previews while you drag and lands on the exact time when you let go.
 - **Folder playlist:** open one episode and the rest of the folder is queued.
@@ -117,7 +117,7 @@ All downloads are pinned to exact versions and checked against SHA-256 checksums
 ### Windows
 Windows 10 (1803+) or 11. No admin rights, no Python.
 
-1. Download **CRT-mpv-1.1.0.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
+1. Download **CRT-mpv-1.1.1.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
 2. Double-click **`install.bat`** in that folder.
    This downloads a portable mpv, the on-screen controls, and the 54 TV pictures into the folder, and adds **CRT-mpv** (with its own icon) to the right-click → *Open with* menu. (If Windows asks whether to run a downloaded file, choose *Run*.)
 3. Play: drag a video onto `CRT-mpv.exe`, or right-click a video → *Open with* → **CRT-mpv**.
@@ -217,7 +217,7 @@ TV remote on the screen. Everything the keyboard can do is on it, with hover and
 |---|---|
 | Top row | **PWR** switches the TV off (the picture collapses to a line, then a dot) and quits the player · **CRT** TV frame and CRT effect on/off together (the `o` and `c` keys do each alone) · **DEG** degauss · **MUTE** |
 | Orange dot-matrix display | current TV and `S` scanlines / `C` curvature / `L` line count (live), in a 5x7 pixel font |
-| Number pad **1-9** | **1-6** are the locked factory presets (Subtle, Classic, Heavy, Anime, VHS, Arcade). **7-9** are programmable: they start **EMPTY**; set the TV and the look you want, then **hold** key 7, 8 or 9 for about a second to save it (the key then reads **SAVED**). A short click recalls it, **right-click** empties it. A saved preset stores the TV and every effect value. |
+| Number pad **1-9** | **1-6** are the locked factory presets (Subtle, Classic, Heavy, Anime, VHS, Arcade). **7-9** are programmable: they start **EMPTY**; set the look you want, then **hold** key 7, 8 or 9 for about a second to save it (the key then reads **SAVED**). A short click recalls it, **right-click** empties it. A saved preset stores every effect value but not the TV, so it works on whichever TV you are watching. |
 | Rockers | **VOL** up/down (hold to repeat) · **TV** next/previous TV · **EP** next/previous episode |
 | Transport | previous · -10 s · play/pause · +10 s · next |
 | Adjustment panel | A single panel instead of a column of buttons: the **◀ ▶** keys pick the setting (**scanlines**, **curvature**, **line count**, **noise**, **signal mode**, **contrast**, **colour**, **glass shine**, **bezel glow**, **VHS tracking**), the orange meter and number show its level (for tracking the meter lights out from the centre), and the large **−** / **+** keys change it (hold to repeat) |
@@ -254,7 +254,7 @@ The **UPDATE** key on the remote checks straight away (even for a version you sk
 
 What an update keeps: your saved TV and look, presets 7-9, volume, resume positions, the shader cache, mpv itself, and TVs you added yourself (their picture and their line in `tvs.json`). Every file it replaces is copied to `backup\<old version>-<date>\` first (the three newest backups are kept), the download is checked against GitHub's SHA-256 checksum, and if anything goes wrong the old version is put back and the player starts again as it was.
 
-Updating from **1.0.0**: version 1.0.0 does not have the update check yet, so update once by hand: download **CRT-mpv-1.1.0.zip**, copy everything from the `CRT-mpv-1.1.0` folder inside it into your CRT-mpv folder (replace the files when Windows asks), then double-click `install.bat` to fetch the new TVs. Your settings are kept. From 1.1.0 on, updates come to you.
+Updating from **1.0.0**: version 1.0.0 does not have the update check yet, so update once by hand: download **CRT-mpv-1.1.1.zip**, copy everything from the `CRT-mpv-1.1.1` folder inside it into your CRT-mpv folder (replace the files when Windows asks), then double-click `install.bat` to fetch the new TVs. Your settings are kept. From 1.1.0 on, updates come to you.
 
 Add `script-opts-append=crt-update=no` to `config/mpv.conf` to turn the check off. On macOS and Linux the same check runs and `mac-linux/update.sh` does the update (untested so far).
 
@@ -297,7 +297,7 @@ script-opts-append=crt-subs-keep-style=yes
 ### The look and the presets
 
 - **Live controls:** everything on the remote's adjustment panel (scanlines, curvature, line count, noise, signal, contrast, colour, tracking) has a key too, except glass shine and bezel glow, which are only on the panel. See the key table under [Using it](#using-it).
-- **Your own presets:** keys 7, 8 and 9 are programmable. Set up the look and TV you want, then hold the key for about a second (or press `Ctrl`+`7`/`8`/`9`). A short click recalls it, a right-click (or `Alt`+`7`/`8`/`9`) empties it. A saved preset stores the TV, scanlines, line count, curvature, mask, vignette, glow, reflection, bezel glow, noise, signal mode, contrast, colour and tracking. They are kept in `config/settings.json`.
+- **Your own presets:** keys 7, 8 and 9 are programmable. Set up the look you want, then hold the key for about a second (or press `Ctrl`+`7`/`8`/`9`). A short click recalls it, a right-click (or `Alt`+`7`/`8`/`9`) empties it. A saved preset never changes the TV. It stores scanlines, line count, curvature, mask, vignette, glow, reflection, bezel glow, noise, signal mode, contrast, colour and tracking. They are kept in `config/settings.json`.
 - **Factory presets 1-6** (Subtle, Classic, Heavy, Anime, VHS, Arcade) are locked in the app. To change what they contain, edit the `presets` table near the top of `config/scripts/crt.lua`; each entry sets `scan`, `lines`, `curve`, `mask`, `vig`, `glow`, `noise`, `ntsc`, `contrast`, `saturation` and `track`.
 - **Defaults of the effect itself:** the first lines of `config/shaders/crt.glsl` declare every parameter and its default (`scan`, `lines`, `curve`, `mask`, `vig`, `glow`, `shine`, `bezel`, `noise`, `ntsc`, `contrast`, `saturation`, `track`). The script overrides them at run time, so change the values in `crt.lua` (the `P` table) if you want different starting defaults for those.
 - **Signal modes:** **clean**; **S-Video** (colour softened and smeared to the right, luma still sharp); **composite** (more colour bleed, rainbow fringes on fine detail, a crawling dot pattern on colour edges); **RF** (heavy colour bleed with soft luma). The Anime preset uses S-Video and VHS uses composite.

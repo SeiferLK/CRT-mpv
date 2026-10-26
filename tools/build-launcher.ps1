@@ -28,7 +28,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("CRT-mpv")]
 [assembly: AssemblyProduct("CRT-mpv")]
 [assembly: AssemblyDescription("CRT TV look for video, rendered by mpv")]
-[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.1.1.0")]
 
 static class Launcher
 {

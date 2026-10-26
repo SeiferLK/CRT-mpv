@@ -58,13 +58,16 @@ local P = { scan = 0.35, lines = 240, curve = 0.30, mask = 0.12, vig = 0.30, glo
 for k in pairs(P) do if type(saved[k]) == "number" then P[k] = saved[k] end end
 local R = { rl = 0, rt = 0, rr = 1, rb = 1 }
 -- Preset keys 1-6 are factory presets and can never be overwritten. Keys 7-9 are user slots: hold the key on the
--- remote (or press Ctrl+7..9) to save the current look and TV into it, right-click it (or Alt+7..9) to empty it.
--- Keyed by "7".."9" so they save cleanly as JSON.
+-- remote (or press Ctrl+7..9) to save the current look into it, right-click it (or Alt+7..9) to empty it. A preset
+-- is only the look: recalling it never changes the TV. Keyed by "7".."9" so they save cleanly as JSON.
 local FIRST_USER = 7
 local slots = {}
 if type(saved.slots) == "table" then
     for k, v in pairs(saved.slots) do
-        if (tonumber(k) or 0) >= FIRST_USER and type(v) == "table" then slots[k] = v end
+        if (tonumber(k) or 0) >= FIRST_USER and type(v) == "table" then
+            v.tv = nil                                  -- presets saved by 1.0 / 1.1 also stored the TV
+            slots[k] = v
+        end
     end
 end
 local SLOT_KEYS = { "scan", "lines", "curve", "mask", "vig", "glow", "shine", "bezel", "noise", "ntsc", "contrast", "saturation", "track" }
@@ -207,9 +210,8 @@ local function current_preset()
         if vals then
             local same = true
             for k, v in pairs(vals) do
-                if k ~= "tv" and math.abs((P[k] or 0) - v) > 0.001 then same = false; break end
+                if math.abs((P[k] or 0) - v) > 0.001 then same = false; break end
             end
-            if same and custom and vals.tv and tvs[idx] and vals.tv ~= tvs[idx].name then same = false end
             if same then return n, custom and ("SLOT " .. n) or presets[n][1] end
         end
     end
@@ -356,20 +358,13 @@ for n = 1, NSLOTS do
     actions["preset_" .. n] = function()
         local vals, custom = slot_values(n)
         if not vals then say("Preset " .. n .. " is empty: hold its key to save the current look here"); return end
-        for k, v in pairs(vals) do if k ~= "tv" then P[k] = v end end
-        if custom and vals.tv then
-            for i, t in ipairs(tvs) do
-                if t.name == vals.tv and i ~= idx then
-                    idx = i; wide = is_wide(t) or false; last_tv[wide] = t.name; apply()
-                end
-            end
-        end
+        for k, v in pairs(vals) do P[k] = v end
         push_opts(); say((custom and "Saved preset " .. n or "Preset: " .. pr[1])); publish()
     end
-    -- programmable: store what is on screen now (look and TV) in this slot
+    -- programmable: store the look on screen now (not the TV) in this slot
     actions["slot_save_" .. n] = function()
         if n < FIRST_USER then say("Preset " .. n .. " is a factory preset and cannot be overwritten (keys 7-9 are programmable)"); return end
-        local sl = { tv = tvs[idx] and tvs[idx].name or nil }
+        local sl = {}
         for _, k in ipairs(SLOT_KEYS) do sl[k] = P[k] end
         slots[tostring(n)] = sl
         say("Saved to preset " .. n .. " (right-click or Alt+" .. n .. " to empty it)"); publish()
