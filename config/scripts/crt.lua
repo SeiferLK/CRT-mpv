@@ -72,6 +72,8 @@ if type(saved.slots) == "table" then
 end
 local SLOT_KEYS = { "scan", "lines", "curve", "mask", "vig", "glow", "shine", "bezel", "noise", "ntsc", "contrast", "saturation", "track" }
 local muted = false
+local episode_osd = 0       -- transient playlist episode number; 0 hides the on-screen digits
+local episode_timer = nil
 -- factory presets all have perfect VHS tracking (track = 0), so recalling one also re-tunes the picture
 local presets = {
     { "Subtle",  { scan = 0.15, lines = 240, curve = 0.15, mask = 0.00, vig = 0.15, glow = 0.15, noise = 0.05, ntsc = 0, contrast = 1.00, saturation = 1.00, track = 0 } },
@@ -90,10 +92,10 @@ if ANIMATE and crt_on then FX.warm = 0 end           -- the screen stays dark un
 
 local function push_opts()
     mp.set_property("glsl-shader-opts", string.format(
-        "scan=%.3f,lines=%.1f,curve=%.3f,mask=%.3f,vig=%.3f,glow=%.3f,shine=%.3f,bezel=%.3f,noise=%.3f,ntsc=%d,contrast=%.3f,saturation=%.3f,track=%.3f,mute=%d,"
+        "scan=%.3f,lines=%.1f,curve=%.3f,mask=%.3f,vig=%.3f,glow=%.3f,shine=%.3f,bezel=%.3f,noise=%.3f,ntsc=%d,contrast=%.3f,saturation=%.3f,track=%.3f,mute=%d,episode=%d,"
         .. "warm=%.4f,poweroff=%.4f,snow=%.3f,degauss=%.3f,fxt=%.3f,rl=%.5f,rt=%.5f,rr=%.5f,rb=%.5f",
         P.scan, P.lines, P.curve, P.mask, P.vig, P.glow, P.shine, overlay_on and P.bezel or 0, P.noise, math.floor(P.ntsc + 0.5), P.contrast, P.saturation, P.track,
-        muted and 1 or 0, FX.warm, FX.off, FX.snow, FX.degauss, FX.t, R.rl, R.rt, R.rr, R.rb))
+        muted and 1 or 0, episode_osd, FX.warm, FX.off, FX.snow, FX.degauss, FX.t, R.rl, R.rt, R.rr, R.rb))
 end
 
 -- runs only while an animation is playing; each one gets its progress p (0..1) every frame
@@ -443,6 +445,20 @@ mp.observe_property("display-height", "number", on_display_change)
 -- Power-on: the first picture warms up out of a thin bright line, starting as soon as the video output is up.
 -- Later episodes arrive through a burst of static.
 local first_picture, new_file = true, false
+local last_loaded_episode_pos = nil
+-- A new playlist entry is an episode regardless of whether it was selected with
+-- the remote, a keyboard shortcut, the playlist UI or automatic advancement.
+-- Hide the startup entry; only a genuine change displays the episode number.
+local function show_episode_number(pos)
+    episode_osd = math.min(pos + 1, 99999)
+    if episode_timer then episode_timer:kill() end
+    push_opts()
+    episode_timer = mp.add_timeout(2.0, function()
+        episode_osd = 0
+        episode_timer = nil
+        push_opts()     -- if muted, the persistent MUTE display returns
+    end)
+end
 local function warm_up()
     if not first_picture then return end
     first_picture = false
@@ -454,6 +470,13 @@ mp.observe_property("video-out-params", "native", function(_, v)
     if v and v.w and (not overlay_on or (applied and v.w == BASE_W and v.h == BASE_H)) then warm_up() end
 end)
 mp.register_event("file-loaded", function()
+    local pos = mp.get_property_number("playlist-pos", -1)
+    if pos >= 0 then
+        if last_loaded_episode_pos ~= nil and pos ~= last_loaded_episode_pos then
+            show_episode_number(pos)
+        end
+        last_loaded_episode_pos = pos
+    end
     if not first_picture then new_file = true end
     mp.add_timeout(10, warm_up)            -- no video output at all (audio-only file, broken video): warm up anyway
 end)

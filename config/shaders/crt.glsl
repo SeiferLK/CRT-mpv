@@ -136,6 +136,13 @@
 //!MAXIMUM 1
 0.0
 
+//!PARAM episode
+//!DESC transient green episode number after playlist advancement; 0 hides it
+//!TYPE float
+//!MINIMUM 0
+//!MAXIMUM 99999
+0.0
+
 //!PARAM rl
 //!DESC screen rectangle left (0..1 of frame)
 //!TYPE float
@@ -175,6 +182,8 @@ const int GM[7] = int[7](17, 27, 21, 21, 17, 17, 17);           // M
 const int GU[7] = int[7](17, 17, 17, 17, 17, 17, 14);           // U
 const int GT[7] = int[7](31, 4, 4, 4, 4, 4, 4);                 // T
 const int GE[7] = int[7](31, 16, 16, 30, 16, 16, 31);           // E
+// Identical 5x7 phosphor font for the short-lived episode-number display.
+const int EPISODE_DIGITS[70] = int[70](14, 17, 19, 21, 25, 17, 14, 4, 12, 4, 4, 4, 4, 14, 14, 17, 1, 2, 4, 8, 31, 30, 1, 1, 14, 1, 1, 30, 2, 6, 10, 18, 31, 2, 2, 31, 16, 30, 1, 1, 17, 14, 6, 8, 16, 30, 17, 17, 14, 31, 1, 2, 4, 8, 8, 8, 14, 17, 17, 14, 17, 17, 14, 14, 17, 17, 15, 1, 2, 12);
 
 bool bitset(int row, int col, int width) { return ((row >> (width - 1 - col)) & 1) == 1; }
 
@@ -213,11 +222,32 @@ float cell_on(ivec2 c) {
     return bitset(row, col, 5) ? 1.0 : 0.0;
 }
 
+// Use the MUTE display's existing phosphor cells, position and bloom.
+// Only digits are shown for episodes: no speaker icon, "EP" label or suffix.
+float episode_cell_on(ivec2 c) {
+    int ty = c.y - 1;
+    if (c.x < 0 || ty < 0 || ty > 6) return 0.0;
+    int number = int(episode + 0.5);
+    int length = number >= 10000 ? 5 : number >= 1000 ? 4
+               : number >= 100 ? 3 : number >= 10 ? 2 : 1;
+    int index = c.x / 6;
+    int col = c.x % 6;
+    if (index >= length || col >= 5) return 0.0;
+    int divisor = 1;
+    for (int i = 0; i < 5; i++)
+        if (i < length - index - 1) divisor *= 10;
+    int digit = (number / divisor) % 10;
+    return bitset(EPISODE_DIGITS[digit * 7 + ty], col, 5) ? 1.0 : 0.0;
+}
+float active_osd_cell(ivec2 c) {
+    return episode > 0.5 ? episode_cell_on(c) : cell_on(c);
+}
+
 // each lit cell is a slightly rounded phosphor block
 float osd_core(vec2 g) {
     vec2 f = fract(g) - 0.5;
     float d = length(max(abs(f) - 0.40, 0.0));
-    return cell_on(ivec2(floor(g))) * (1.0 - smoothstep(0.0, 0.14, d));
+    return active_osd_cell(ivec2(floor(g))) * (1.0 - smoothstep(0.0, 0.14, d));
 }
 
 // soft light bleeding into the neighbouring cells
@@ -226,7 +256,7 @@ float osd_halo(vec2 g) {
     float h = 0.0;
     for (int i = -2; i <= 2; i++)
         for (int j = -2; j <= 2; j++)
-            h += exp(-float(i * i + j * j) * 0.35) * cell_on(b + ivec2(i, j));
+            h += exp(-float(i * i + j * j) * 0.35) * active_osd_cell(b + ivec2(i, j));
     return clamp(h / 5.0, 0.0, 1.0);
 }
 
@@ -450,7 +480,7 @@ vec4 hook() {
 
     // on-screen display, drawn into the picture so it inherits curvature, scanlines and mask.
     // Like a real TV menu the lit cells replace the video underneath, with a soft green bloom around them.
-    if (mute > 0.5) {
+    if (mute > 0.5 || episode > 0.5) {
         vec2 g = vec2(w.x * asp.x, w.y) * 140.0 - vec2(12.0, 9.5);
         if (g.x > -6.0 && g.x < 48.0 && g.y > -6.0 && g.y < 15.0) {
             float core = osd_core(g);

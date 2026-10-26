@@ -133,11 +133,11 @@ local function next_audio()
 end
 
 -- open the Retrogrounds website in the default browser
-local SITE = "https://retrogrounds.com"
+local SITE = "https://retrogrounds.com/?utm_source=crt_mpv&utm_medium=app&utm_campaign=remote&utm_content=retrogrounds_button"
 local function open_site()
     local plat = mp.get_property("platform") or (package.config:sub(1, 1) == "\\" and "windows" or "linux")
     local args
-    if plat == "windows" then args = { "cmd", "/c", "start", "", SITE }
+    if plat == "windows" then args = { "cmd", "/c", 'start "" "' .. SITE .. '"' }  -- quote &-separated UTM tags for cmd.exe
     elseif plat == "darwin" then args = { "open", SITE }
     else args = { "xdg-open", SITE } end
     mp.command_native_async({ name = "subprocess", args = args, playback_only = false, capture_stdout = true, capture_stderr = true },
