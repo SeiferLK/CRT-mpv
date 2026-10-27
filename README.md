@@ -36,6 +36,17 @@ CRT-mpv is free. If you enjoy it, you can support its development on [Ko-fi](htt
 
 *Widescreen Wii 16:9 TV (ffmpeg's `testsrc2` test pattern). The remote's **16:9** key is lit: the TV keys now step through the widescreen TVs only.*
 
+| | |
+|:---:|:---:|
+| ![White TV with night mode off](docs/screenshot-night-off.jpg) | ![The same frame with night mode on: the TV and the room are dark and the screen's glow spills onto the bezel](docs/screenshot-night-on.jpg) |
+| Night mode off | [Night mode](#night-mode) on |
+
+*The same frame on the White TV (It's Always Sunny in Philadelphia). With night mode on, the TV and the room around the screen go dark and the screen's glow on the bezel gets a little stronger; the picture itself is unchanged.*
+
+![A YouTube video playing on the widescreen Wii 16:9 TV, with the hover controls and the on-screen remote showing](docs/screenshot-youtube.jpg)
+
+*A YouTube video on the widescreen Wii 16:9 TV, opened with the [YouTube](#youtube) button (highlighted under the pointer on the hover bar), with the on-screen remote open.*
+
 The video frames in these screenshots belong to their respective rights holders and are shown only to demonstrate the effect. The TV artwork is by Soqueroeu (see [Credits](#credits)).
 
 ## Contents
@@ -43,7 +54,7 @@ The video frames in these screenshots belong to their respective rights holders 
 - [What is new and custom](#what-is-new-and-custom)
 - [Why this exists (and why it isn't a VLC plugin)](#why-this-exists-and-why-it-isnt-a-vlc-plugin)
 - [Install](#install): [Windows](#windows) · [macOS](#macos) · [Linux](#linux) · [Uninstall](#uninstall)
-- [Using it](#using-it), the [on-screen remote](#on-screen-remote) and [updates](#updates)
+- [Using it](#using-it), the [on-screen remote](#on-screen-remote), [opening videos](#opening-videos), [YouTube](#youtube) and [updates](#updates)
 - [Customising](#customising)
 - [How it works](#how-it-works)
 - [Performance](#performance)
@@ -77,6 +88,9 @@ CRT-mpv started from a VLC plugin, but almost everything you see here is new cod
 - **Everything is remembered**: TV, look, presets, volume, mute and loop come back on the next start, saved on every change and on exit.
 - **VLC-style hover bar** (previous/next, seek, volume, audio and subtitle tracks, speed, playlist, loop, fullscreen) with a seek that previews while you drag and lands on the exact time when you let go.
 - **Folder playlist:** open one episode and the rest of the folder is queued.
+- **Open videos from the player:** started on its own, CRT-mpv switches the TV on with no signal, and an eject button on the hover bar opens a video.
+- **YouTube on the TV:** a button on the hover bar opens a panel to paste a YouTube link, and the video plays on the TV like any other.
+- **Night mode:** a moon button on the hover bar turns the room lights off: the TV and the room around the screen fade dark and the screen's glow on the TV shows a little more.
 - **Updates itself:** when a new version is released, the player offers it at start-up (or when you press **UPDATE** on the remote), downloads it from GitHub, installs it with your settings kept and starts again on the same episode, at the same spot.
 
 **The engineering**
@@ -117,10 +131,10 @@ All downloads are pinned to exact versions and checked against SHA-256 checksums
 ### Windows
 Windows 10 (1803+) or 11. No admin rights, no Python.
 
-1. Download **CRT-mpv-1.1.3.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
+1. Download **CRT-mpv-1.2.0.zip** from the [latest release](https://github.com/SeiferLK/CRT-mpv/releases/latest) and unzip it somewhere permanent, e.g. `C:\Users\<you>\CRT-mpv` (or `git clone https://github.com/SeiferLK/CRT-mpv.git`).
 2. Double-click **`install.bat`** in that folder.
-   This downloads a portable mpv, the on-screen controls, and the 54 TV pictures into the folder, and adds **CRT-mpv** (with its own icon) to the right-click → *Open with* menu. (If Windows asks whether to run a downloaded file, choose *Run*.)
-3. Play: drag a video onto `CRT-mpv.exe`, or right-click a video → *Open with* → **CRT-mpv**.
+   This downloads a portable mpv, the on-screen controls, the 54 TV pictures and yt-dlp (for YouTube links; plus Deno if your PC has neither Deno nor Node.js) into the folder, and adds **CRT-mpv** (with its own icon) to the right-click → *Open with* menu. (If Windows asks whether to run a downloaded file, choose *Run*.)
+3. Play: drag a video onto `CRT-mpv.exe`, or right-click a video → *Open with* → **CRT-mpv**, or double-click `CRT-mpv.exe` and open one with the eject button on the hover bar.
    `CRT-mpv.exe --windowed video.mkv` plays in a window. (`tools\play.bat` and `tools\play-windowed.bat` do the same without the launcher.)
    `CRT-mpv.exe` is a small launcher the installer builds on your PC with the C# compiler that comes with Windows; it carries the CRT-mpv icon, which is what Windows shows in the *Open with* menu and on file thumbnails.
 
@@ -158,7 +172,7 @@ Close CRT-mpv first, then:
 
 This removes the *Open With* entry, including what Windows recorded after you used it (recently used lists, CRT-mpv as the default app for a file type, cached names, "new app" notices, compatibility and usage records, and the audio device remembered for it; only entries for this folder are touched, and `.\tools\unregister-openwith.ps1 -WhatIf` lists them without changing anything); on macOS it removes `~/Applications/CRT-mpv.app`, and on Linux `crt-mpv.desktop` and any default-app choices for it. Everything is per-user, so no admin rights are needed. After that it deletes the folder.
 
-To keep the folder as a fresh copy instead, run `powershell -ExecutionPolicy Bypass -File .\tools\uninstall.ps1` on Windows or `mac-linux/uninstall.sh` on macOS/Linux: the uninstaller then removes only what the installer downloaded or built (mpv, `CRT-mpv.exe`, the controls, the 54 TV pictures) and the player's saved state (remote settings, resume positions, shader cache, logs, the update check and the updater's backups). TV pictures you added yourself are kept. Run the installer again to reinstall. On macOS and Linux, mpv came from your package manager and is left installed.
+To keep the folder as a fresh copy instead, run `powershell -ExecutionPolicy Bypass -File .\tools\uninstall.ps1` on Windows or `mac-linux/uninstall.sh` on macOS/Linux: the uninstaller then removes only what the installer downloaded or built (mpv, `CRT-mpv.exe`, the controls, the 54 TV pictures, yt-dlp, Deno) and the player's saved state (remote settings, resume positions, shader cache, logs, the update check and the updater's backups). TV pictures you added yourself are kept. Run the installer again to reinstall. On macOS and Linux, mpv came from your package manager and is left installed.
 
 > mpv needs a build with Lua scripting and ffmpeg's `lavfi` filter (all mainstream packages have both).
 > The launchers run mpv with `--config-dir=<this folder>/config`, so your own `~/.config/mpv` is never touched.
@@ -171,7 +185,7 @@ While audio is muted (or the volume is turned all the way down), a green **MUTE*
 
 **Subtitles** are kept inside the TV screen: lines use the full width of the glass and sit just above its bottom edge, and they do not move when the hover bar appears. They are blended into the picture before the CRT shader runs, so they get the same curvature, scanlines, phosphor mask and glow as the video. For this, styled (ASS) subtitles are shown as plain text; add `script-opts-append=crt-subs-keep-style=yes` to `config/mpv.conf` to keep their original styling (they may then leave the screen).
 
-**Hover controls** (move the mouse): title, seek bar, previous/next episode, play/pause, ±10 s, volume slider, audio-track and subtitle buttons (shown when the file has them), speed, playlist, loop, fullscreen.
+**Hover controls** (move the mouse): title, seek bar, previous/next episode, play/pause, ±10 s, volume slider, audio-track and subtitle buttons (shown when the file has them), speed, playlist, [eject](#opening-videos), loop, [YouTube](#youtube), [night mode](#night-mode), fullscreen.
 Opening one video loads the other videos in the same folder as a playlist, so previous/next move through episodes.
 
 **Keys** while playing:
@@ -201,7 +215,7 @@ Opening one video loads the other videos in the same folder as a playlist, so pr
 
 Everything you change on the remote is saved when you quit (and a moment after each change, in case the player
 crashes) and restored the next time it starts: the **TV** (and the last 16:9 and 4:3 TV you used), TV frame on/off, CRT effect on/off, scanlines, curvature,
-line count, mask, vignette, glow, reflection, bezel glow, noise, signal mode, VHS tracking and your saved presets 7-9 (so the active preset), **volume**, **mute** and **loop**.
+line count, mask, vignette, glow, reflection, bezel glow, noise, signal mode, VHS tracking and your saved presets 7-9 (so the active preset), night mode, **volume**, **mute** and **loop**.
 They are kept in `config/settings.json`. Not remembered: fullscreen, playback speed, and the subtitle and audio-track
 choice (those depend on the video). Delete `config/settings.json` to reset, or add `script-opts-append=crt-settings=no`
 to `config/mpv.conf` to turn remembering off.
@@ -242,6 +256,24 @@ TVs (54):
 
 Widescreen TVs: Wii 16:9, TV7, TV7 Wood and 9519 3DS.
 
+### Opening videos
+
+Started without a video (`CRT-mpv.exe` double-clicked or pinned to the taskbar, or `mac-linux/crt-mpv` on its own), the player switches the TV on with **no signal**: a dark, faintly grainy screen, with the remote and the hover bar ready. The same screen comes back whenever there is nothing left to play.
+
+The **eject button on the hover bar** (tooltip: *Open a video*) opens your system's file picker, starting in the folder of the video you are watching. Pick one video (the rest of its folder is queued, as when you open it from the file manager) or several, and they replace what was playing. On Linux the picker is `zenity` or `kdialog`; install one if neither is there.
+
+### YouTube
+
+Click the **YouTube button on the hover bar** (left of the moon button) to watch a YouTube video on the TV. The video pauses and a panel opens with a link field: paste the video's link (**Paste** fills the field from the clipboard, `Ctrl+V` pastes too, and typing works) and press **Play** or `Enter`. The YouTube video takes the place of what was playing and gets the TV, the CRT effect and the remote like any other video. **Cancel** or `Esc` closes the panel and the video carries on.
+
+If the link cannot be played (a private or removed video, no internet, or an out-of-date yt-dlp), the video you were watching comes back at the same spot and the panel opens again with the link and the reason.
+
+YouTube videos are fetched by [yt-dlp](https://github.com/yt-dlp/yt-dlp), which the installer puts in `config/`. yt-dlp needs a JavaScript runtime for YouTube: it uses [Deno](https://deno.com) or [Node.js](https://nodejs.org) if your computer has one (`config/mpv.conf` turns Node.js on), and when it has neither, the installer downloads Deno into `config/` for it (about 43 MB; `config/scripts/youtube.lua` points yt-dlp at that copy). Videos are fetched at 1080p at most (`ytdl-format` in `config/mpv.conf`). See the [screenshot](#screenshots).
+
+### Night mode
+
+The **moon button on the hover bar** (left of the remote button) switches the room lights off: over half a second the TV set and the room around the screen fade dark, with a slightly cool, dusky tint, and the light the screen throws onto the TV (the bezel glow) gets a little stronger. The picture on the screen is not changed. The moon turns orange while night mode is on; click it again to put the lights back on. Night mode is remembered with your other settings. It needs the TV frame and the CRT effect on (the darkening is done by the CRT shader). See the [before and after screenshots](#screenshots).
+
 ### Updates
 
 A few seconds after the player starts it asks GitHub whether a newer CRT-mpv has been released (at most once an hour). If there is one, the video pauses and a panel shows the new version and what is new, with three buttons:
@@ -254,7 +286,7 @@ The **UPDATE** key on the remote checks straight away (even for a version you sk
 
 What an update keeps: your saved TV and look, presets 7-9, volume, resume positions, the shader cache, mpv itself, and TVs you added yourself (their picture and their line in `tvs.json`). Every file it replaces is copied to `backup\<old version>-<date>\` first (the three newest backups are kept), the download is checked against GitHub's SHA-256 checksum, and if anything goes wrong the old version is put back and the player starts again as it was.
 
-Updating from **1.0.0**: version 1.0.0 does not have the update check yet, so update once by hand: download **CRT-mpv-1.1.3.zip**, copy everything from the `CRT-mpv-1.1.3` folder inside it into your CRT-mpv folder (replace the files when Windows asks), then double-click `install.bat` to fetch the new TVs. Your settings are kept. From 1.1.0 on, updates come to you.
+Updating from **1.0.0**: version 1.0.0 does not have the update check yet, so update once by hand: download **CRT-mpv-1.2.0.zip**, copy everything from the `CRT-mpv-1.2.0` folder inside it into your CRT-mpv folder (replace the files when Windows asks), then double-click `install.bat` to fetch the new TVs. Your settings are kept. From 1.1.0 on, updates come to you.
 
 Add `script-opts-append=crt-update=no` to `config/mpv.conf` to turn the check off. On macOS and Linux the same check runs and `mac-linux/update.sh` does the update (untested so far).
 
@@ -336,22 +368,24 @@ script-opts-append=crt-subs-keep-style=yes
 
 ### Hover controls and playlist
 
-- **Hover bar:** `config/script-opts/modernz.conf` (layout, which buttons show, colours). See the [ModernZ docs](https://github.com/Samillion/ModernZ). The installer patches one ModernZ button to open the remote, and `sub_margins`/`dynamic_margins` are off so subtitles stay put. The seek handle follows your cursor while dragging; a brief pause in movement shows a fast preview, and release seeks accurately to the selected time. Shift-click keeps the faster keyframe seek. This behavior is handled by `config/script-modules/crt_seek.lua`.
+- **Hover bar:** `config/script-opts/modernz.conf` (layout, which buttons show, colours). See the [ModernZ docs](https://github.com/Samillion/ModernZ). The installer patches one ModernZ button to open the remote, and `config/script-modules/crt_bar.lua` redraws three ModernZ buttons CRT-mpv has no other use for: the screenshot button becomes the YouTube button, the pin (on top) button the night-mode moon (what they do is set by `screenshot_mbtn_left_command` and `ontop_mbtn_left_command`), and the shuffle button the eject button. `sub_margins`/`dynamic_margins` are off so subtitles stay put. The seek handle follows your cursor while dragging; a brief pause in movement shows a fast preview, and release seeks accurately to the selected time. Shift-click keeps the faster keyframe seek. This behavior is handled by `config/script-modules/crt_seek.lua`.
 - **Folder playlist:** `config/script-opts/autoload.conf`. Opening one video loads the others in the same folder, so previous/next move through episodes.
 
 ### The app
 
 - **Icon:** the CRT-mpv icon is in `assets/` (`icon.png`, `crt-mpv.ico`, `crt-mpv.icns`). On Windows it is built into `CRT-mpv.exe` (the *Open with* entry and file badges) and, through a small hidden PowerShell helper (`tools/set-window-icon.ps1`, started by `config/scripts/window-icon.lua`), the player's taskbar button and title bar. The helper also gives the window CRT-mpv's taskbar identity, so right-clicking the taskbar button offers **CRT-mpv** (not plain mpv) and *Pin to taskbar* pins CRT-mpv. `mpv.exe` itself is never modified. `crt-window-icon=no` turns the window icon helper off.
 - **Open with:** `tools/register-openwith.ps1` adds CRT-mpv to the right-click menu (`install.bat` does it for you) and `tools/unregister-openwith.ps1` removes it (`uninstall.bat` does it for you). Re-run the register script if you move the folder.
-- **Launching:** `CRT-mpv.exe` starts fullscreen; started without a video (double-clicked, or from a pinned taskbar icon) it asks which video to play. `CRT-mpv.exe --windowed video.mkv` (or `tools\play-windowed.bat`) plays in a window, and any other `--option` is passed straight to mpv. On macOS and Linux use `mac-linux/crt-mpv` (`--no-fullscreen` for a window).
+- **Launching:** `CRT-mpv.exe` starts fullscreen; started without a video (double-clicked, or from a pinned taskbar icon) it opens with the TV showing no signal (see [Opening videos](#opening-videos)). `CRT-mpv.exe --windowed video.mkv` (or `tools\play-windowed.bat`) plays in a window, and any other `--option` is passed straight to mpv. On macOS and Linux use `mac-linux/crt-mpv` (`--no-fullscreen` for a window).
 
 ## How it works
 
 1. `config/scripts/crt.lua` builds an ffmpeg filter graph (`--vf=lavfi`): it scales the video to fit the TV's screen rectangle, scales the TV picture to a canvas the size of your desktop (the largest 16:9 area that fits it), cuts a transparent hole at the screen rectangle (`drawbox … replace=1`), and lays the TV over the video. Because the TV is part of the *video*, mpv's on-screen controls and subtitles are drawn on top of it. The canvas is composited in planar yuv420 pinned to BT.709 (about a third of the data of RGBA, and roughly 2.5x to 3.5x less CPU than compositing in RGBA) and the final chroma upscale uses `cscale=spline36`.
-2. `config/shaders/crt.glsl` is an mpv user shader on the `OUTPUT` stage. It sees the final scaled picture at display resolution and applies barrel curvature, scanlines, RGB phosphor mask, glow, vignette, NTSC signal simulation, a glass reflection highlight (soft light in the upper-left plus a diagonal streak and a top-edge glint), analog noise (grain, colour noise, a rolling interference band and line jitter), VHS tracking error and the mute on-screen display **only inside the TV's screen rectangle**, plus the bezel glow just around it (light from the picture, mirrored across the nearest screen edge and blurred more the further it travels) (the script passes the rectangle in as shader parameters). The short animations (warm-up, power-off, channel static, degauss) are shader parameters too: `crt.lua` steps them about 60 times a second while one is playing, and not at all otherwise.
+2. `config/shaders/crt.glsl` is an mpv user shader on the `OUTPUT` stage. It sees the final scaled picture at display resolution and applies barrel curvature, scanlines, RGB phosphor mask, glow, vignette, NTSC signal simulation, a glass reflection highlight (soft light in the upper-left plus a diagonal streak and a top-edge glint), analog noise (grain, colour noise, a rolling interference band and line jitter), VHS tracking error and the mute on-screen display **only inside the TV's screen rectangle**, plus the bezel glow just around it (light from the picture, mirrored across the nearest screen edge and blurred more the further it travels) (the script passes the rectangle in as shader parameters). Night mode is a shader parameter too: it darkens everything outside the rectangle and strengthens the bezel glow. The short animations (warm-up, power-off, channel static, degauss) are shader parameters too: `crt.lua` steps them about 60 times a second while one is playing, and not at all otherwise.
 3. `ModernZ` provides the hover controls; mpv's `autoload.lua` provides the folder playlist.
 4. `config/scripts/settings.lua` and `config/script-modules/crt_settings.lua` save and restore the settings. `config/scripts/remote.lua` draws the on-screen remote with ASS vector graphics and sends CRT actions to `crt.lua` (`script-message crt-do <action>`). `crt.lua` publishes its state (TV, scanlines, curvature, lines) to `user-data/crt` so the remote's display stays in sync.
 5. `config/scripts/update.lua` compares the newest GitHub release with the `VERSION` file and shows the update panel. *Update now* hands over to `tools/update.ps1` (Windows) or `mac-linux/update.sh` (macOS / Linux), which waits for the player to close, downloads the release zip, backs up and replaces the changed files, runs the installer for anything new (TV pictures, controls), rebuilds `CRT-mpv.exe` and starts the player again.
+6. `config/scripts/youtube.lua` draws the YouTube panel and loads the link with `loadfile`; mpv's built-in `ytdl_hook` runs yt-dlp (`config/yt-dlp.exe` on Windows, `config/yt-dlp` on macOS / Linux) to turn it into a stream. When the installer downloaded Deno into `config/`, the script passes it to yt-dlp (`ytdl-raw-options` `js-runtimes=deno:<path>`). If the link fails, the script reloads the previous video and seeks back to where it was.
+7. `config/scripts/open.lua` runs the eject button's file picker (a Windows Forms dialog through PowerShell, `choose file` through `osascript` on macOS, `zenity` or `kdialog` on Linux) and loads what is picked. `config/mpv.conf` sets `idle=once` and `force-window=yes` so the player opens without a video; whenever it is idle, the script plays a black `lavfi` source titled *No signal*, so the TV and the controls stay up.
 
 (The TV is part of the video rather than drawn with mpv's `overlay-add` because that layer is always drawn above every on-screen control, which would hide them.)
 
@@ -371,6 +405,7 @@ CRT-mpv composites the TV around the video on the CPU, so it costs more than pla
 - **No remote button on the bar:** the installer patches ModernZ; re-run it (it fails loudly if ModernZ's code ever changes). `r` always opens the remote.
 - **Controls don't appear:** check `config/scripts/modernz.lua` and `config/fonts/modernz-icons.ttf` exist.
 - **A TV is missing from the list:** its picture did not download; double-click `install.bat` again.
+- **A YouTube video won't play:** YouTube changes often and older yt-dlp versions stop working; a newer CRT-mpv brings a newer yt-dlp. yt-dlp also needs Deno or Node.js: if you had one when you installed CRT-mpv and have removed it since, run the installer again and it downloads Deno. Run mpv with `--log-file=crt.log` to see yt-dlp's message.
 - **An update did not work:** CRT-mpv puts the old version back by itself and tells you. The files it replaced are also in the `backup` folder. You can always update by hand: copy the files from the latest release's zip into your CRT-mpv folder and double-click `install.bat`; your settings are kept.
 
 ---
@@ -396,6 +431,7 @@ This project stands on a lot of other people's work. Thank you to:
 - [**shinchiro**](https://github.com/shinchiro/mpv-winbuild-cmake): the portable Windows builds of mpv.
 - **libplacebo** (Niklas Haas and contributors): mpv's `gpu-next` renderer that runs the shader; **FFmpeg**: the `lavfi` filters that scale, pad and composite the TV.
 - [**ModernZ**](https://github.com/Samillion/ModernZ) by **Samillion**: the hover controls; a derivative of **mpv-osc-modern by maoiscat** and the forks **cyl0/ModernX** and **dexeonify/ModernX**, which in turn are based on mpv's official `osc.lua`. Includes its own icon font (`modernz-icons.ttf`).
+- [**yt-dlp**](https://github.com/yt-dlp/yt-dlp) and its contributors: fetches YouTube videos for the YouTube button. [**Deno**](https://deno.com): the JavaScript runtime yt-dlp uses for YouTube on computers without one.
 
 ## Licenses
 
@@ -406,7 +442,9 @@ This project stands on a lot of other people's work. Thank you to:
   | Component | Source | License |
   |---|---|---|
   | mpv (Windows build) | shinchiro/mpv-winbuild-cmake release 20261021 | GPL/LGPL, see the mpv project |
-  | ModernZ + icon font | Samillion/ModernZ v0.3.3 (the installer changes its `info` button into the remote button and appends a hook for CRT-mpv's seek controller) | LGPL-2.1 |
+  | ModernZ + icon font | Samillion/ModernZ v0.3.3 (the installer changes its `info` button into the remote button and appends a hook for CRT-mpv's seek controller and bar buttons) | LGPL-2.1 |
+  | yt-dlp | yt-dlp/yt-dlp release 2026.10.26 (the standalone build for each system) | Unlicense; the standalone builds as a whole are GPLv3+ |
+  | Deno (only without Deno or Node.js) | denoland/deno release v2.9.8 | MIT |
   | `autoload.lua` | mpv-player/mpv @ `867990d` | mpv project's license |
   | TV pictures (15) | itsdunintime104/VLC-CRT-emulator-plugin @ `603a777` (Soqueroeu's artwork) | Soqueroeu's terms, below |
   | TV pictures (29) | soqueroeu/Soqueroeu-TV-Backgrounds_V2.0 @ `52bc458` | Soqueroeu's terms, below |

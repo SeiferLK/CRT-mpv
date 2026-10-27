@@ -2,7 +2,7 @@
  Builds CRT-mpv.exe in the repo folder: a tiny launcher that carries the CRT-mpv icon and starts the bundled
  mpv with this folder's config (fullscreen by default). Windows only; compiled with the C# compiler that ships
  with Windows, so nothing is downloaded and mpv.exe is never modified.
- Started without a video (from a pinned taskbar icon, say), it asks for one.
+ Started without a video (from a pinned taskbar icon, say), the player opens with the TV showing no signal.
    .\tools\build-launcher.ps1            build it (skips if it is newer than the icon and this script)
    .\tools\build-launcher.ps1 -Force     rebuild
 #>
@@ -28,7 +28,7 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("CRT-mpv")]
 [assembly: AssemblyProduct("CRT-mpv")]
 [assembly: AssemblyDescription("CRT TV look for video, rendered by mpv")]
-[assembly: AssemblyVersion("1.1.3.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
 
 static class Launcher
 {
@@ -57,16 +57,8 @@ static class Launcher
             if (a.StartsWith("--")) { sb.Append(" " + Quote(a)); continue; }     // other mpv options pass straight through
             files.Append(" " + Quote(a));
         }
-        if (files.Length == 0)                 // started without a video (pinned icon, taskbar menu): ask for one
-        {
-            Application.EnableVisualStyles();
-            var dlg = new OpenFileDialog();
-            dlg.Title = "CRT-mpv: choose a video";
-            dlg.Multiselect = true;
-            dlg.Filter = "Videos|*.mkv;*.mp4;*.avi;*.mov;*.wmv;*.webm;*.m4v;*.flv;*.ts;*.m2ts;*.mpg;*.mpeg;*.ogv;*.3gp;*.divx;*.vob|All files|*.*";
-            if (dlg.ShowDialog() != DialogResult.OK) return 0;
-            foreach (string f in dlg.FileNames) files.Append(" " + Quote(f));
-        }
+        // started without a video (double-clicked, pinned icon): the player opens with the TV showing no signal
+        // (config\scripts\open.lua), and the hover bar's eject button opens a video
         if (!windowed) sb.Append(" --fullscreen");
         if (files.Length > 0) sb.Append(" --").Append(files);
         var psi = new ProcessStartInfo(mpv, sb.ToString());

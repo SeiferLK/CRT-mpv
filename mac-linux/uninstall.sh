@@ -37,7 +37,7 @@ if [ "${1:-}" = "--remove-folder" ]; then
 fi
 
 echo "[2/3] downloaded files"
-rm -rf .cache config/scripts/modernz.lua config/scripts/autoload.lua config/fonts/modernz-icons.ttf
+rm -rf .cache config/scripts/modernz.lua config/scripts/autoload.lua config/fonts/modernz-icons.ttf config/yt-dlp config/deno
 rmdir config/fonts 2>/dev/null || true      # created by the installer; kept if you put fonts of your own there
 for tv in G02_Generic_TV Generic_CRT_Monitor Generic_Flat_TV Generic_Gray_TV Generic_White_TV \
           Nintendo_Famicom Nintendo_N64 Nintendo_NES Nintendo_SNES SNK_NeoGeo Sega_Dreamcast \

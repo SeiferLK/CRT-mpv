@@ -80,6 +80,13 @@
 //!MAXIMUM 1
 0.5
 
+//!PARAM night
+//!DESC night mode: the room lights are off, so the TV around the screen is dark and the screen's glow on it a little stronger 0..1
+//!TYPE float
+//!MINIMUM 0
+//!MAXIMUM 1
+0.0
+
 //!PARAM shine
 //!DESC glass reflection highlight 0..1
 //!TYPE float
@@ -278,7 +285,7 @@ vec3 screen_light(vec2 p, vec2 rc, vec2 rs, vec2 asp) {
     vec2 q = abs(p) - (0.5 * asp - rad);
     vec2 qo = max(q, 0.0);
     float d = max(length(qo) + min(max(q.x, q.y), 0.0) - rad, 0.0);   // distance outside the glass
-    float k = bezel * (0.65 * exp(-d * 50.0) + 0.15 * exp(-d * 14.0));
+    float k = bezel * (1.0 + 0.35 * night) * (0.65 * exp(-d * 50.0) + 0.15 * exp(-d * 14.0));   // stronger in the dark
     float lit = smoothstep(0.3, 1.0, warm) * (1.0 - smoothstep(0.2, 0.6, poweroff));   // follows the power effects
     if (k * lit < 0.004)
         return vec3(0.0);
@@ -312,7 +319,7 @@ vec4 hook() {
     vec2 uv = (p0 - rc) / rs;
     if (p0.x < rl || p0.x > rr || p0.y < rt || p0.y > rb) {
         // the TV around the screen: its own picture plus light from the screen, mirrored across the nearest edge
-        vec3 tv = HOOKED_tex(p0).rgb;
+        vec3 tv = HOOKED_tex(p0).rgb * mix(vec3(1.0), vec3(0.26, 0.27, 0.31), night);   // night mode: lights off, a cool dusk
         if (bezel <= 0.0 || length((uv - clamp(uv, 0.0, 1.0)) * asp) > 0.25)
             return vec4(tv, 1.0);
         return vec4(tv + screen_light((uv - 0.5) * asp, rc, rs, asp), 1.0);

@@ -32,7 +32,7 @@ if ! command -v mpv >/dev/null 2>&1; then
 fi
 echo "  found $(command -v mpv)  ($(mpv --version | head -1))"
 
-echo "[2/4] hover controls + folder playlist"
+echo "[2/4] hover controls + folder playlist + yt-dlp"
 fetch https://github.com/Samillion/ModernZ/releases/download/v0.3.3/modernz.lua \
       c36aef0152d3fdb0c769cefe7074648b457ed50ea4ddcc402b778bec23ca32c8 .cache/modernz.lua
 # Two-string patch of the verified file: the bar's "i" button becomes the CRT remote button.
@@ -46,16 +46,50 @@ grep -qF 'local function osc_init()' .cache/modernz.lua || { echo 'ModernZ seek 
 cat >> config/scripts/modernz.lua <<'LUA'
 
 local crt_seek = dofile(mp.command_native({"expand-path", "~~/script-modules/crt_seek.lua"}))
+local crt_bar = dofile(mp.command_native({"expand-path", "~~/script-modules/crt_bar.lua"}))
 local upstream_osc_init = osc_init
 osc_init = function()
     upstream_osc_init()
     crt_seek.attach(state.seekbar_element, get_slider_value, request_tick, state, user_opts)
+    crt_bar.attach(elements)
 end
 LUA
 fetch https://github.com/Samillion/ModernZ/releases/download/v0.3.3/modernz-icons.ttf \
       5033b84d569502538968c6f23b0859bda790eed85c10e419b0759537ec60a016 config/fonts/modernz-icons.ttf
 fetch https://raw.githubusercontent.com/mpv-player/mpv/867990d949e9ad99406e0f26e5528e95046b30a7/TOOLS/lua/autoload.lua \
       5d2f5491edf1c9857932a4fd816413651d110345e7e57b5ad915f74fb4d516ca config/scripts/autoload.lua
+# yt-dlp: mpv uses it to play YouTube links (the bar's YouTube button), and finds it in the config folder
+yt=https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26
+case "$(uname -s)/$(uname -m)" in
+    Darwin/*)      fetch "$yt/yt-dlp_macos" 0f922c15ccc0b83eefa1c8bc9104e434318c4bf16e408e1ee93b7745a6efe0aa config/yt-dlp ;;
+    Linux/x86_64)  fetch "$yt/yt-dlp_linux" 767ba9dce7052aa196f8b12652f433d76de128ba168966fa84b6394d5e6c6795 config/yt-dlp ;;
+    Linux/aarch64) fetch "$yt/yt-dlp_linux_aarch64" e87e9533e89fe5889abaa21f5114dfe7756d6aa6219b83551add04d48b18e483 config/yt-dlp ;;
+    *)             echo "  no yt-dlp build for this machine: install yt-dlp with your package manager to play YouTube links" ;;
+esac
+if [ -f config/yt-dlp ]; then chmod +x config/yt-dlp; fi
+# Deno: yt-dlp needs a JavaScript runtime for YouTube. Downloaded only when there is neither Deno nor Node.js
+# (yt-dlp finds those by itself); scripts/youtube.lua points yt-dlp at this copy.
+deno=https://github.com/denoland/deno/releases/download/v2.9.8
+if [ -f config/deno ]; then echo "  Deno already present"
+elif command -v deno >/dev/null 2>&1 || command -v node >/dev/null 2>&1; then echo "  Deno or Node.js found: YouTube uses it"
+else
+    case "$(uname -s)/$(uname -m)" in
+        Darwin/arm64)  deno_zip=deno-aarch64-apple-darwin.zip deno_sha=9f0bf660393da2eaff044cdc7444cb08c73f235849b61d224d825a194ce7c98e ;;
+        Darwin/x86_64) deno_zip=deno-x86_64-apple-darwin.zip deno_sha=4b2f5edd2639b7470f034238b321d7002d8dfb4726d8558f52c17afac370eb2c ;;
+        Linux/x86_64)  deno_zip=deno-x86_64-unknown-linux-gnu.zip deno_sha=e890975bc2549807bbcc0b584ffafda72cc7c93349dd99c80483dd784f6c4609 ;;
+        Linux/aarch64) deno_zip=deno-aarch64-unknown-linux-gnu.zip deno_sha=d49596c20b9788cf8f5d8ddf644103d4bde56ed239753f0bdb92ba9361d51905 ;;
+        *)             deno_zip= ;;
+    esac
+    if [ -n "$deno_zip" ]; then
+        fetch "$deno/$deno_zip" "$deno_sha" .cache/deno.zip
+        if command -v unzip >/dev/null 2>&1; then unzip -oq .cache/deno.zip deno -d config
+        else python3 -m zipfile -e .cache/deno.zip config; fi
+        chmod +x config/deno
+        rm -f .cache/deno.zip
+    else
+        echo "  no Deno build for this machine: install Deno or Node.js to play YouTube links"
+    fi
+fi
 
 echo "[3/4] TV pictures (54)"
 ovl=https://raw.githubusercontent.com/itsdunintime104/VLC-CRT-emulator-plugin/603a77752cd78d091389072e6ad61f86086cd31f/overlays

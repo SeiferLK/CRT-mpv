@@ -32,7 +32,7 @@ local function take(prefix, keys)
 end
 
 -- published by crt.lua and remote.lua
-mp.observe_property("user-data/crt", "native", take(nil, { "tv", "tv_wide", "tv_43", "frame", "crt", "scan", "curve", "lines", "mask", "vig", "glow", "shine", "bezel", "noise", "ntsc", "contrast", "saturation", "track", "slots" }))
+mp.observe_property("user-data/crt", "native", take(nil, { "tv", "tv_wide", "tv_43", "frame", "crt", "night", "scan", "curve", "lines", "mask", "vig", "glow", "shine", "bezel", "noise", "ntsc", "contrast", "saturation", "track", "slots" }))
 
 -- plain player properties
 local function observe(prop, key, kind)

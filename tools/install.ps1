@@ -42,7 +42,7 @@ if (-not (Test-Path $mpvExe)) {
 } else { Write-Host '[1/4] mpv already present' }
 
 # --- on-screen controls (ModernZ v0.3.3) and folder playlist (mpv project) ---
-Write-Host '[2/4] hover controls + folder playlist'
+Write-Host '[2/4] hover controls + folder playlist + yt-dlp'
 $mzOrig = Join-Path $root '.cache\modernz.lua'
 Get-Verified 'https://github.com/Samillion/ModernZ/releases/download/v0.3.3/modernz.lua' `
              'c36aef0152d3fdb0c769cefe7074648b457ed50ea4ddcc402b778bec23ca32c8' $mzOrig
@@ -52,15 +52,17 @@ foreach ($needle in 'ne.content = icons.info', 'ne.tooltipF = locale.stats_info'
     if (-not $mz.Contains($needle)) { throw "ModernZ patch failed: '$needle' not found." }
 }
 $mz = $mz.Replace('ne.content = icons.info', 'ne.content = icons.menu').Replace('ne.tooltipF = locale.stats_info', 'ne.tooltipF = "CRT remote"')
-# Attach our seek controller after each ModernZ layout rebuild.
+# Attach our seek controller and our own bar buttons (YouTube, night mode) after each ModernZ layout rebuild.
 if (-not $mz.Contains('local function osc_init()')) { throw 'ModernZ seek hook: osc_init not found.' }
 $mz += @'
 
 local crt_seek = dofile(mp.command_native({"expand-path", "~~/script-modules/crt_seek.lua"}))
+local crt_bar = dofile(mp.command_native({"expand-path", "~~/script-modules/crt_bar.lua"}))
 local upstream_osc_init = osc_init
 osc_init = function()
     upstream_osc_init()
     crt_seek.attach(state.seekbar_element, get_slider_value, request_tick, state, user_opts)
+    crt_bar.attach(elements)
 end
 '@
 New-Item -ItemType Directory -Force (Join-Path $root 'config\scripts') | Out-Null
@@ -69,6 +71,23 @@ Get-Verified 'https://github.com/Samillion/ModernZ/releases/download/v0.3.3/mode
              '5033b84d569502538968c6f23b0859bda790eed85c10e419b0759537ec60a016' (Join-Path $root 'config\fonts\modernz-icons.ttf')
 Get-Verified 'https://raw.githubusercontent.com/mpv-player/mpv/867990d949e9ad99406e0f26e5528e95046b30a7/TOOLS/lua/autoload.lua' `
              '5d2f5491edf1c9857932a4fd816413651d110345e7e57b5ad915f74fb4d516ca' (Join-Path $root 'config\scripts\autoload.lua')
+# yt-dlp: mpv uses it to play YouTube links (the bar's YouTube button), and finds it in the config folder
+Get-Verified 'https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp.exe' `
+             'f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d' (Join-Path $root 'config\yt-dlp.exe')
+# Deno: yt-dlp needs a JavaScript runtime for YouTube. Downloaded only when this PC has neither Deno nor Node.js
+# (yt-dlp finds those by itself); scripts\youtube.lua points yt-dlp at this copy.
+$denoExe = Join-Path $root 'config\deno.exe'
+if (Test-Path $denoExe) { Write-Host '  Deno already present' }
+elseif (Get-Command deno, node -ErrorAction SilentlyContinue) { Write-Host '  Deno or Node.js found on this PC: YouTube uses it' }
+else {
+    $arc = Join-Path $env:TEMP 'crt-mpv-deno.zip'
+    Get-Verified 'https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip' `
+                 'cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf' $arc
+    $x = Join-Path $env:TEMP 'crt-mpv-deno'
+    Expand-Archive -LiteralPath $arc -DestinationPath $x -Force
+    Move-Item (Join-Path $x 'deno.exe') $denoExe -Force
+    Remove-Item $arc, $x -Recurse -Force
+}
 
 # --- TV pictures: the first 15 (Soqueroeu TV Backgrounds) via the VLC plugin repo, pinned commit ---
 Write-Host '[3/4] TV pictures (54)'

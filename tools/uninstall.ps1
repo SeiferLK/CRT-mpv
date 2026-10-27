@@ -17,7 +17,7 @@ if ($running) { Write-Host 'CRT-mpv is still playing. Close it, then run the uni
 
 Write-Host '[1/3] Open with entry and what Windows recorded about CRT-mpv'
 & (Join-Path $root 'tools\unregister-openwith.ps1')
-Remove-Item (Join-Path $env:TEMP 'crt-mpv-mpv.7z') -Force -ErrorAction SilentlyContinue   # left by an interrupted install
+Remove-Item (Join-Path $env:TEMP 'crt-mpv-mpv.7z'), (Join-Path $env:TEMP 'crt-mpv-deno.zip') -Force -ErrorAction SilentlyContinue   # left by an interrupted install
 
 if ($RemoveFolder) {
     Write-Host "[2/3] deleting $root"
@@ -47,7 +47,7 @@ $tvs = 'G02_Generic_TV','Generic_CRT_Monitor','Generic_Flat_TV','Generic_Gray_TV
        'Nintendo_SuperFamicom_v2','Nintendo_SuperGameBoy','Nintendo_Wii','Nintendo_Wii_16x9','Panasonic_3DO',
        'Sega_CD','Sega_MarkIII','Sega_SG1000','Sega_Saturn'
 $paths = @('mpv', 'CRT-mpv.exe', '.cache', 'config\scripts\modernz.lua', 'config\scripts\autoload.lua',
-           'config\fonts\modernz-icons.ttf') + ($tvs | ForEach-Object { "config\overlays\$_.png" })
+           'config\fonts\modernz-icons.ttf', 'config\yt-dlp.exe', 'config\deno.exe') + ($tvs | ForEach-Object { "config\overlays\$_.png" })
 foreach ($p in $paths) { Remove-Item (Join-Path $root $p) -Recurse -Force -ErrorAction SilentlyContinue }
 $fonts = Join-Path $root 'config\fonts'            # created by the installer; kept if you put fonts of your own there
 if ((Test-Path $fonts) -and -not (Get-ChildItem $fonts -Force)) { Remove-Item $fonts }

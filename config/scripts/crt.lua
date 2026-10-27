@@ -72,6 +72,7 @@ if type(saved.slots) == "table" then
 end
 local SLOT_KEYS = { "scan", "lines", "curve", "mask", "vig", "glow", "shine", "bezel", "noise", "ntsc", "contrast", "saturation", "track" }
 local muted = false
+local night = saved.night == true    -- night mode: the room lights are off (the shader darkens the TV around the screen)
 local episode_osd = 0       -- transient playlist episode number; 0 hides the on-screen digits
 local episode_timer = nil
 -- factory presets all have perfect VHS tracking (track = 0), so recalling one also re-tunes the picture
@@ -87,14 +88,14 @@ local presets = {
 -- Short-lived effects driven from Lua: the power-on warm-up, the power-off collapse, the burst of static when the
 -- channel changes, and the degauss wobble. fxt is their own clock, so they also animate while the video is paused.
 local ANIMATE = mp.get_opt("crt-animations") ~= "no"
-local FX = { warm = 1, off = 0, snow = 0, degauss = 0, t = 0 }
+local FX = { warm = 1, off = 0, snow = 0, degauss = 0, t = 0, night = night and 1 or 0 }   -- night fades in and out
 if ANIMATE and crt_on then FX.warm = 0 end           -- the screen stays dark until the first frame warms it up
 
 local function push_opts()
     mp.set_property("glsl-shader-opts", string.format(
-        "scan=%.3f,lines=%.1f,curve=%.3f,mask=%.3f,vig=%.3f,glow=%.3f,shine=%.3f,bezel=%.3f,noise=%.3f,ntsc=%d,contrast=%.3f,saturation=%.3f,track=%.3f,mute=%d,episode=%d,"
+        "scan=%.3f,lines=%.1f,curve=%.3f,mask=%.3f,vig=%.3f,glow=%.3f,shine=%.3f,bezel=%.3f,night=%.3f,noise=%.3f,ntsc=%d,contrast=%.3f,saturation=%.3f,track=%.3f,mute=%d,episode=%d,"
         .. "warm=%.4f,poweroff=%.4f,snow=%.3f,degauss=%.3f,fxt=%.3f,rl=%.5f,rt=%.5f,rr=%.5f,rb=%.5f",
-        P.scan, P.lines, P.curve, P.mask, P.vig, P.glow, P.shine, overlay_on and P.bezel or 0, P.noise, math.floor(P.ntsc + 0.5), P.contrast, P.saturation, P.track,
+        P.scan, P.lines, P.curve, P.mask, P.vig, P.glow, P.shine, overlay_on and P.bezel or 0, FX.night, P.noise, math.floor(P.ntsc + 0.5), P.contrast, P.saturation, P.track,
         muted and 1 or 0, episode_osd, FX.warm, FX.off, FX.snow, FX.degauss, FX.t, R.rl, R.rt, R.rr, R.rb))
 end
 
@@ -223,7 +224,7 @@ end
 local function publish()
     pcall(mp.set_property_native, "user-data/crt", {
         tv = tvs[idx] and tvs[idx].name or "", frame = overlay_on, crt = crt_on,
-        wide = wide, tv_wide = last_tv[true], tv_43 = last_tv[false],
+        wide = wide, tv_wide = last_tv[true], tv_43 = last_tv[false], night = night,
         scan = P.scan, curve = P.curve, lines = P.lines, mask = P.mask, vig = P.vig, glow = P.glow, shine = P.shine, bezel = P.bezel, noise = P.noise, ntsc = P.ntsc, contrast = P.contrast, saturation = P.saturation, track = P.track,
         preset = select(2, current_preset()), preset_n = (current_preset()),
         slots = slots,
@@ -320,6 +321,16 @@ local actions = {
         mp.osd_message("")
         animate("off", 0.6, function(p) FX.off = p end, function() mp.commandv("quit") end)   -- long enough to see it speed up
         mp.add_timeout(2, function() mp.commandv("quit") end)          -- in case the animation stalls
+    end,
+    -- night mode (the hover bar's moon button): the room lights go out, so the TV and the room around the screen
+    -- fade dark and the screen's glow on the TV shows a little more. The picture itself is unchanged.
+    night = function()
+        if not night and not (crt_on and overlay_on) then say("Night mode needs the TV frame and the CRT effect on"); return end
+        night = not night
+        local from, to = FX.night, night and 1 or 0
+        if ANIMATE then animate("night", 0.6, function(p) FX.night = from + (to - from) * p * p * (3 - 2 * p) end)
+        else FX.night = to; push_opts() end
+        say(night and "Night mode on" or "Night mode off"); publish()
     end,
     frame = function()
         overlay_on = not overlay_on; apply(); say("TV overlay " .. (overlay_on and "on" or "off")); publish()
