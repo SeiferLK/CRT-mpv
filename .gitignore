@@ -16,6 +16,7 @@ config/*.log
 .cache/
 /CRT-mpv.exe
 config/settings.json
+config/open-locations.json
 # left by the updater (tools/update.ps1, mac-linux/update.sh)
 config/update.json
 /backup/

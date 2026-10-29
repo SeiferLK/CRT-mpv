@@ -139,6 +139,12 @@ end
 
 local function say(msg) mp.osd_message(msg, 1.5) end
 
+-- The no-signal static is stretched over the whole TV screen (4:3 or 16:9) instead of fitted inside it with black
+-- bars, and with nearest-neighbour scaling so its blocks stay sharp. Set from the on_load hook below, before the
+-- first frame is built.
+local fill_screen = false
+local STATIC_BLOCK = 3       -- static grain size in canvas pixels on a 1440 high canvas; scales with the canvas
+
 local function graph_for(tv)
     local hw = math.floor((tv.r - tv.l) * BASE_W + 0.5)
     local hh = math.floor((tv.b - tv.t) * BASE_H + 0.5)
@@ -149,15 +155,25 @@ local function graph_for(tv)
     -- The canvas is composited in planar yuv420 (1.5 bytes per pixel) instead of RGBA (4 bytes per pixel): about
     -- twice as fast on the CPU and a third of the data to upload. Everything is pinned to BT.709 limited range so
     -- the TV picture (converted from RGB) and the video agree and no colour shift is introduced.
+    local fit
+    if fill_screen then
+        -- static: a grid of whole-pixel blocks (square, STATIC_BLOCK canvas pixels), so no block is wider than the next
+        local block = math.max(2, math.floor(STATIC_BLOCK * BASE_H / 1440 + 0.5))
+        local cols, rows = math.max(1, math.floor(hw / block + 0.5)), math.max(1, math.floor(hh / block + 0.5))
+        fit = string.format("scale=%d:%d:flags=neighbor,scale=%d:%d:flags=neighbor,scale=%d:%d:flags=neighbor",
+            cols, rows, cols * block, rows * block, hw, hh)
+    else
+        fit = string.format("scale=%d:%d:force_original_aspect_ratio=decrease:flags=lanczos", hw, hh)
+    end
     return string.format(
         "[in]scale=trunc(iw*sar/2)*2:ih,setsar=1,"
-        .. "scale=%d:%d:force_original_aspect_ratio=decrease:flags=lanczos:out_color_matrix=bt709:out_range=tv,"
+        .. fit .. ":out_color_matrix=bt709:out_range=tv,setsar=1,"
         .. "pad=%d:%d:%d+(%d-iw)/2:%d+(%d-ih)/2:black,format=yuv420p[v];"
         .. "movie='%s',scale=%d:%d:flags=lanczos:out_color_matrix=bt709:out_range=tv,format=yuva420p,"
         .. "drawbox=x=%d:y=%d:w=%d:h=%d:color=black@0:t=fill:replace=1[tv];"
         .. "[v][tv]overlay=format=yuv420:eof_action=repeat,"
         .. "setparams=colorspace=bt709:range=tv:color_primaries=bt709:color_trc=bt709[out]",
-        hw, hh, BASE_W, BASE_H, hx, hw, hy, hh,
+        BASE_W, BASE_H, hx, hw, hy, hh,
         path, BASE_W, BASE_H, hx, hy, hw, hh)
 end
 
@@ -196,6 +212,14 @@ local function apply()
     end
     push_opts()
 end
+
+-- the no-signal static (see NO_SIGNAL in open.lua) fills the screen; any real video is fitted inside it again
+mp.add_hook("on_load", 40, function()
+    local fill = (mp.get_property("stream-open-filename") or ""):find("^av://lavfi:color=c=gray") ~= nil
+    if fill == fill_screen then return end
+    fill_screen = fill
+    if applied and overlay_on then apply() end
+end)
 
 -- what preset key n recalls: the user's saved slot if there is one, otherwise the factory preset
 local NSLOTS = 9      -- keys 1-6 start as factory presets, keys 7-9 start empty (programmable only)

@@ -53,7 +53,7 @@ $fonts = Join-Path $root 'config\fonts'            # created by the installer; k
 if ((Test-Path $fonts) -and -not (Get-ChildItem $fonts -Force)) { Remove-Item $fonts }
 
 Write-Host '[3/3] saved settings, resume positions, shader cache and logs'
-foreach ($p in 'config\settings.json', 'config\update.json', 'config\watch_later', 'config\cache', 'config\*.log', '*.log',
+foreach ($p in 'config\settings.json', 'config\open-locations.json', 'config\update.json', 'config\watch_later', 'config\cache', 'config\*.log', '*.log',
                'backup', '.update-manifest') {
     Remove-Item (Join-Path $root $p) -Recurse -Force -ErrorAction SilentlyContinue
 }

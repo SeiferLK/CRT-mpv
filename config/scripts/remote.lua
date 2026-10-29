@@ -117,6 +117,25 @@ local function cmd(...)
 end
 local function crt(a) return function() mp.commandv("script-message", "crt-do", a) end end
 
+-- SHOT: mpv only logs where the screenshot went, so listen for that line just while one is being taken and show it
+-- on the OSD (top left, like the other messages)
+local shot_timer
+local function take_screenshot()
+    mp.enable_messages("info")
+    if shot_timer then shot_timer:kill() end
+    shot_timer = mp.add_timeout(5, function() mp.enable_messages("no") end)
+    mp.commandv("screenshot")
+end
+mp.register_event("log-message", function(e)
+    if e.prefix ~= "cplayer" then return end
+    local path = e.text:match("^Screenshot: '(.+)'")
+    if not path then return end
+    if shot_timer then shot_timer:kill(); shot_timer = nil end
+    mp.enable_messages("no")
+    if path:find("\\", 1, true) then path = path:gsub("/", "\\") end      -- Windows: one kind of slash
+    mp.osd_message("Screenshot saved to " .. path, 4)
+end)
+
 -- switch to the next audio track (language / dub). Unlike `cycle audio` this never lands on "no audio".
 local function next_audio()
     local ids, cur = {}, mp.get_property_native("aid")
@@ -481,8 +500,8 @@ local function build()
     small(5, 836, "wide", "16:9", crt("wide"), nil, st.wide == true)
     small(1, 886, "full", "FULL", cmd("cycle", "fullscreen"), nil, pl.fs)
     small(2, 886, "loop", "LOOP", cmd("cycle-values", "loop-file", "inf", "no"), nil, pl.loop)
-    small(3, 886, "shot", "SHOT", cmd("screenshot"))
-    small(4, 886, "list", "LIST", cmd("script-binding", "select/select-playlist"))
+    small(3, 886, "shot", "SHOT", take_screenshot)
+    small(4, 886, "list", "LIST", cmd("script-message", "crt-menu", "playlist"))
     -- check GitHub for a newer CRT-mpv now (orange when one is already known to be out)
     small(5, 886, "update", "UPDATE", function() mp.commandv("script-message", "crt-update-check") end, nil, nil, nil, 10,
           upd.available and C.accent or nil)
@@ -611,6 +630,7 @@ local function on_right_click(e)
 end
 
 local function set_capture(on)
+    if on and mp.get_property_native("user-data/crt-menu-open") then on = false end
     if on == capturing then return end
     capturing = on
     if on then
@@ -641,7 +661,9 @@ end
 local function show()
     open = true
     pcall(mp.set_property_native, "user-data/crt-remote", { remote = true })
-    mp.add_forced_key_binding("ESC", "crt-remote-esc", close)
+    if not mp.get_property_native("user-data/crt-menu-open") then
+        mp.add_forced_key_binding("ESC", "crt-remote-esc", close)
+    end
     render()
 end
 
@@ -656,6 +678,18 @@ mp.observe_property("mouse-pos", "native", function(_, m)
     if over then id = hit(m.x, m.y) end
     set_capture(over)
     if id ~= hover then hover = id; render() end
+end)
+
+-- A menu owns input: hovering the remote behind it must not steal its mouse or Escape keys.
+mp.observe_property("user-data/crt-menu-open", "bool", function(_, active)
+    if active then
+        set_capture(false)
+        mp.remove_key_binding("crt-remote-esc")
+    elseif open then
+        mp.add_forced_key_binding("ESC", "crt-remote-esc", close)
+        local m = mp.get_property_native("mouse-pos")
+        if m then set_capture(m.hover ~= false and inside(m.x, m.y)) end
+    end
 end)
 
 mp.observe_property("user-data/crt", "native", function(_, v) st = v or {}; render() end)

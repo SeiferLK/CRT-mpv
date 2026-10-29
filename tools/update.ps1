@@ -21,24 +21,14 @@ Remove-Item -LiteralPath $Job -Force -ErrorAction SilentlyContinue
 $tag = [string]$j.tag
 $relaunch = @($j.relaunch | Where-Object { $_ -is [string] -and $_ })   # (an empty list arrives as {} from Lua)
 
-# The player has closed by the time anything happens, so this small window is all there is to see.
-$form = New-Object Windows.Forms.Form
-$form.Text = 'Updating CRT-mpv'
-$form.FormBorderStyle = 'FixedDialog'; $form.MaximizeBox = $false; $form.MinimizeBox = $false; $form.ControlBox = $false
-$form.StartPosition = 'CenterScreen'; $form.ClientSize = New-Object Drawing.Size(440, 104); $form.TopMost = $true
-$ico = Join-Path $root 'assets\crt-mpv.ico'
-if (Test-Path $ico) { $form.Icon = New-Object Drawing.Icon $ico }
-$label = New-Object Windows.Forms.Label
-$label.SetBounds(18, 16, 404, 40); $label.Font = New-Object Drawing.Font('Segoe UI', 10)
-$bar = New-Object Windows.Forms.ProgressBar
-$bar.SetBounds(18, 62, 404, 22); $bar.Style = 'Marquee'
-$form.Controls.AddRange(@($label, $bar))
+# The player has closed by the time anything happens, so this window carries the menu styling.
+. (Join-Path $PSScriptRoot 'update-ui.ps1')
+$ui = New-CrtUpdateWindow $root $tag
+$form = $ui.Form
+$label = $ui.Status
 $form.Show()
 function Status([string]$text, [int]$percent = -1) {
-    $label.Text = $text
-    if ($percent -ge 0) { $bar.Style = 'Continuous'; $bar.Value = [Math]::Max(0, [Math]::Min(100, $percent)) }
-    else { $bar.Style = 'Marquee' }
-    [Windows.Forms.Application]::DoEvents()
+    Set-CrtUpdateStatus $ui $text $percent
 }
 
 function Start-Player([string[]]$extra) {
@@ -107,7 +97,7 @@ try {
     }
 
     # never replaced, even if a release were to contain them: per-machine state, the downloaded mpv, the built launcher
-    $keep = '^(config\\settings\.json|config\\update\.json|config\\watch_later\\|config\\cache\\|backup\\|mpv\\|\.cache\\|CRT-mpv\.exe$|\.update-manifest$)'
+    $keep = '^(config\\settings\.json|config\\update\.json|config\\open-locations\.json|config\\watch_later\\|config\\cache\\|backup\\|mpv\\|\.cache\\|CRT-mpv\.exe$|\.update-manifest$)'
     $files = @(Get-ChildItem $new -Recurse -File | ForEach-Object { $_.FullName.Substring($new.Length + 1) } | Where-Object { $_ -notmatch $keep })
 
     # TVs you added (a picture in config\overlays plus an entry in tvs.json) stay in the new tvs.json
@@ -179,9 +169,7 @@ try {
         }
         try { Invoke-Script 'tools\build-launcher.ps1' @('-Force') } catch { }
     }
-    $form.Hide()
-    [void][Windows.Forms.MessageBox]::Show("The update to CRT-mpv $tag did not work:`n`n$err`n`nCRT-mpv was left as it was.",
-        'CRT-mpv update', 'OK', 'Warning')
+    Show-CrtUpdateFailure $ui $tag $err
     if ($playerClosed) { Start-Player @('--script-opts-append=crt-update-failed=1') }
 } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

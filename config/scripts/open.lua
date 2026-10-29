@@ -1,6 +1,6 @@
--- CRT-mpv "open a video". The eject button on the hover bar (ModernZ's shuffle button, redrawn by
--- script-modules/crt_bar.lua) or `script-message crt-open` shows the system's file picker and plays what is chosen
--- (one video also queues the rest of its folder, as when it is opened from the file manager).
+-- Optional native pickers for custom bindings; the eject button uses open-menu.lua.
+-- The file picker plays one or several videos; a single file queues the rest of its folder.
+-- The folder picker sends the chosen location back to the eject menu for browsing.
 -- Whenever there is nothing to play (CRT-mpv.exe started without a video, say), the TV shows no signal instead of
 -- an empty window, so the remote and the hover bar are there to open something.
 local mp = require 'mp'
@@ -8,7 +8,8 @@ local utils = require 'mp.utils'
 local msg = require 'mp.msg'
 
 local WIN = package.config:sub(1, 1) == "\\"
-local NO_SIGNAL = "av://lavfi:color=c=black:s=640x480:r=25"
+-- luma-only noise over mid grey, re-rolled every frame and stretched toward black and white: TV static
+local NO_SIGNAL = "av://lavfi:color=c=gray:s=640x360:r=25,noise=c0s=100:c0f=t+u,eq=contrast=1.9,scale=1920:1080:flags=neighbor"
 local EXTS = { "mkv", "mp4", "avi", "mov", "wmv", "webm", "m4v", "flv", "ts", "m2ts", "mpg", "mpeg", "ogv", "3gp", "divx", "vob" }
 
 -- the folder of the video playing now, to open the picker in (nil for streams and the no-signal screen)
@@ -19,9 +20,18 @@ local function current_dir()
 end
 
 -- the picker for this system, as a list of commands to try in turn (the first one that exists is used)
-local function pickers(dir)
+local function pickers(dir, folder)
     if WIN then
         local function q(s) return "'" .. s:gsub("'", "''") .. "'" end
+        if folder then return { { "powershell.exe", "-NoProfile", "-NonInteractive", "-STA", "-Command", table.concat({
+            "[Console]::OutputEncoding = [Text.Encoding]::UTF8",
+            "Add-Type -AssemblyName System.Windows.Forms",
+            "$owner = New-Object Windows.Forms.Form -Property @{ TopMost = $true }",
+            "$d = New-Object Windows.Forms.FolderBrowserDialog",
+            "$d.Description = 'CRT-mpv: choose a folder'",
+            dir and ("$d.SelectedPath = " .. q(dir)) or "$null",
+            "if ($d.ShowDialog($owner) -eq 'OK') { $d.SelectedPath }",
+        }, "; ") } } end
         return { { "powershell.exe", "-NoProfile", "-NonInteractive", "-STA", "-Command", table.concat({
             "[Console]::OutputEncoding = [Text.Encoding]::UTF8",
             "Add-Type -AssemblyName System.Windows.Forms",
@@ -35,6 +45,11 @@ local function pickers(dir)
     end
     if mp.get_property("platform") == "darwin" then
         local function q(s) return '"' .. s:gsub('[\\"]', "\\%0") .. '"' end
+        if folder then return { { "osascript",
+            "-e", 'tell application "System Events"', "-e", "activate",
+            "-e", 'set f to choose folder with prompt "CRT-mpv: choose a folder"'
+                .. (dir and (" default location POSIX file " .. q(dir)) or ""),
+            "-e", "end tell", "-e", "return POSIX path of f" } } end
         return { { "osascript",
             "-e", 'tell application "System Events"', "-e", "activate",
             "-e", 'set fs to choose file with prompt "CRT-mpv: choose a video" with multiple selections allowed'
@@ -43,6 +58,12 @@ local function pickers(dir)
             "-e", "repeat with f in fs", "-e", "set out to out & POSIX path of f & linefeed", "-e", "end repeat",
             "-e", "return out" } }
     end
+    if folder then return {
+        { "zenity", "--file-selection", "--directory", "--title=CRT-mpv: choose a folder",
+          dir and ("--filename=" .. dir .. "/") or "--filename=" .. (os.getenv("HOME") or "") .. "/" },
+        { "kdialog", "--getexistingdirectory", dir or os.getenv("HOME") or ".",
+          "--title", "CRT-mpv: choose a folder" },
+    } end
     return {
         { "zenity", "--file-selection", "--multiple", "--separator=\n", "--title=CRT-mpv: choose a video",
           dir and ("--filename=" .. dir .. "/") or "--filename=" .. (os.getenv("HOME") or "") .. "/" },
@@ -58,10 +79,10 @@ local function play(files)
 end
 
 local picking = false
-local function open()
+local function open(folder, initial_dir)
     if picking then return end
     picking = true
-    local list = pickers(current_dir())
+    local list = pickers(initial_dir ~= "" and initial_dir or current_dir(), folder)
     local function try(i)
         if not list[i] then
             picking = false
@@ -74,7 +95,9 @@ local function open()
             picking = false
             local files = {}
             for line in ((res and res.stdout) or ""):gmatch("[^\r\n]+") do files[#files + 1] = line end
-            if #files > 0 then play(files)
+            if #files > 0 then
+                if folder then mp.commandv("script-message", "crt-open-browse", files[1])
+                else play(files) end
             elseif res and res.status ~= 0 and res.status ~= 1 then              -- 1: the picker was cancelled
                 msg.warn("file picker failed: " .. tostring(res.stderr))
             end
@@ -83,7 +106,8 @@ local function open()
     try(1)
 end
 
-mp.register_script_message("crt-open", open)
+mp.register_script_message("crt-open-picker", function(dir) open(false, dir) end)
+mp.register_script_message("crt-open-folder-picker", function(dir) open(true, dir) end)
 
 -- nothing to play: the TV comes on with no signal. Not again if that fails (it would only fail again).
 local no_signal = nil            -- "loading" while the no-signal screen loads, "failed" if it could not

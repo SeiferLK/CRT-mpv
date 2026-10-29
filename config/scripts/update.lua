@@ -98,7 +98,6 @@ local function note_lines(body, max)
         line = line:gsub("%[([^%]]*)%]%b()", "%1"):gsub("[`*_#>]", ""):gsub("^%s*[-+]%s+", "- ")
         line = line:gsub("[{}\\]", ""):gsub("^%s+", ""):gsub("%s+$", "")
         if line ~= "" then
-            if #line > 72 then line = line:sub(1, 69) .. "..." end
             out[#out + 1] = line
             if #out == max then break end
         end
@@ -107,86 +106,35 @@ local function note_lines(body, max)
 end
 
 ---------------------------------------------------------------------------------------------------------------------
--- the prompt: a panel in the remote's colours with three buttons, clickable or driven by Enter / Esc / S
+-- The prompt shares the library's panel style, with mouse and keyboard navigation.
 
-local ov = mp.create_osd_overlay("ass-events")
-ov.z = 1000                                             -- above the remote
-local prompt = nil                                      -- { rel, cur, notes, buttons, hover, was_paused }
-
-local function hex(c)
-    local r, g, b = c:match("#(%x%x)(%x%x)(%x%x)")
-    return string.format("&H%s%s%s&", b, g, r)
-end
-
-local function rrect(x, y, w, h, r)
-    local x2, y2 = x + w, y + h
-    return string.format(
-        "m %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f "
-        .. "l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f",
-        x + r, y, x2 - r, y, x2, y, x2, y, x2, y + r, x2, y2 - r, x2, y2, x2, y2, x2 - r, y2,
-        x + r, y2, x, y2, x, y2, x, y2 - r, x, y + r, x, y, x, y, x + r, y)
-end
+package.path = mp.command_native({"expand-path","~~/script-modules/"}) .. "/?.lua;" .. package.path
+local view = require('crt_menu_view').new()
+local prompt, hide
+local modal = require('crt_modal').new("update",function() if prompt then hide(false) end end)
+local BINDINGS = {}
 
 local function draw()
-    if not prompt then ov:remove(); return end
-    local dim = mp.get_property_native("osd-dimensions") or {}
-    local W, H = dim.w or 0, dim.h or 0
-    if W <= 0 or H <= 0 then return end
-    local s = math.min(W / 1280, H / 720)
-    local out = {}
-    local function shape(path, fill, stroke, alpha, blur)
-        out[#out + 1] = string.format("{\\an7\\pos(0,0)\\1c%s\\3c%s\\bord%.1f\\shad0\\1a&H%02X&\\blur%.1f\\p1}%s",
-            hex(fill), hex(stroke or fill), stroke and 1.5 * s or 0, alpha or 0, blur or 0, path)
-    end
-    local function text(str, x, y, size, color, bold, an)
-        out[#out + 1] = string.format("{\\an%d\\pos(%.1f,%.1f)\\fs%.1f\\1c%s\\bord0\\shad0\\b%d}%s",
-            an or 7, x, y, size * s, hex(color), bold and 1 or 0, str)
-    end
-
-    local pw, ph = 600 * s, (225 + #prompt.notes * 25) * s
-    local px, py = (W - pw) / 2, (H - ph) / 2
-    shape(rrect(0, 0, W, H, 0), "#000000", nil, 0x60)                                   -- dim the picture
-    shape(rrect(px - 6 * s, py + 4 * s, pw + 12 * s, ph + 12 * s, 26 * s), "#000000", nil, 0x50, 10 * s)   -- shadow
-    shape(rrect(px, py, pw, ph, 22 * s), "#151518", "#383840")                          -- the panel
-    text("Update available: CRT-mpv " .. prompt.rel.tag:gsub("^v", ""), px + 30 * s, py + 26 * s, 30, "#ff8232", true)
-    text("You have " .. prompt.cur .. ". Your settings, presets, resume positions and TVs are kept.",
-        px + 30 * s, py + 68 * s, 17, "#74747e")
-    for i, line in ipairs(prompt.notes) do
-        text(line, px + 30 * s, py + (100 + (i - 1) * 25) * s, 19, "#c4c4cc")
-    end
-
-    local by, bh = py + ph - 100 * s, 46 * s
-    local specs = {
-        { id = "update", label = "Update now", w = 190, primary = true },
-        { id = "later",  label = "Later",      w = 130 },
-        { id = "skip",   label = "Skip this version", w = 200 },
-    }
-    local bx = px + 30 * s
-    prompt.buttons = {}
-    for _, b in ipairs(specs) do
-        local w, hov = b.w * s, prompt.hover == b.id
-        local fill = b.primary and (hov and "#ff9a52" or "#ff8232") or (hov and "#464652" or "#2d2d35")
-        shape(rrect(bx, by + 3 * s, w, bh, 12 * s), "#09090c")                          -- side wall
-        shape(rrect(bx, by, w, bh, 12 * s), fill, "#08080b")                            -- cap
-        text(b.label, bx + w / 2, by + bh / 2, 20, b.primary and "#140904" or "#e8e8ee", true, 5)
-        prompt.buttons[#prompt.buttons + 1] = { id = b.id, x1 = bx, y1 = by, x2 = bx + w, y2 = by + bh }
-        bx = bx + w + 14 * s
-    end
-    text("Enter: update     Esc: later     S: skip", px + pw - 26 * s, py + ph - 24 * s, 13, "#74747e", false, 3)
-
-    ov.res_x, ov.res_y = W, H
-    ov.data = table.concat(out, "\n")
-    ov:update()
+    if not prompt then view:close(); return end
+    local body={"Your library, settings, presets, playback position and TVs are kept."}
+    for _,line in ipairs(prompt.notes) do body[#body+1]=line end
+    view:render_dialog({
+        id="update",title="CRT-mpv "..prompt.rel.tag:gsub("^v","").." is ready",
+        subtitle="Installed version: "..prompt.cur,body=body,hover=prompt.hover,focus=prompt.focus,
+        buttons={{id="later",label="Later",width=82},{id="skip",label="Skip version",width=125},
+            {id="update",label="Update now",width=140,primary=true}},
+        hint="Enter  Choose    Esc  Later    S  Skip version",
+        suspended=mp.get_property_native("window-minimized")==true,
+    })
 end
 
-local BINDINGS = { "crt-update-click", "crt-update-dbl", "crt-update-enter", "crt-update-kpenter", "crt-update-esc", "crt-update-s" }
-
-local function hide(resume)
+hide = function(resume)
     if not prompt then return end
-    if resume and not prompt.was_paused then mp.set_property_bool("pause", false) end
-    prompt = nil
-    for _, n in ipairs(BINDINGS) do mp.remove_key_binding(n) end
-    draw()
+    prompt=nil
+    for _,name in ipairs(BINDINGS) do mp.remove_key_binding(name) end
+    BINDINGS={}
+    modal:release(resume)
+    view:close()
 end
 
 local function later() hide(true) end
@@ -210,7 +158,6 @@ end
 local function accept()
     if not prompt then return end
     local rel = prompt.rel
-    hide(false)                                         -- stays paused until the player quits
     if not rel.url then mp.osd_message("This release has no download. Get it from " .. tostring(rel.page), 6); return end
     local relaunch = {}
     if not mp.get_property_bool("fullscreen") then relaunch[#relaunch + 1] = WIN and "--windowed" or "--no-fullscreen" end
@@ -226,9 +173,11 @@ local function accept()
         if not f then mp.osd_message("Could not start the update (no temp folder)", 5); return end
         f:write(utils.format_json({ url = rel.url, sha256 = rel.sha256 or "", tag = rel.tag, pid = pid, relaunch = relaunch }))
         f:close()
+        hide(false)                                     -- stays paused until the player quits
         mp.commandv("run", "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
             "-File", root .. "\\tools\\update.ps1", "-Job", job)
     else
+        hide(false)
         local args = { "run", root .. "/mac-linux/update.sh", rel.url, rel.sha256 or "", rel.tag, tostring(pid) }
         for _, a in ipairs(relaunch) do args[#args + 1] = a end
         mp.commandv(table.unpack(args))
@@ -237,39 +186,59 @@ local function accept()
     mp.add_timeout(0.8, function() mp.command("quit-watch-later") end)         -- resume here after the restart
 end
 
+local function action(id)
+    if id=="update" then accept() elseif id=="skip" then skip() else later() end
+end
 local function click()
     local m = mp.get_property_native("mouse-pos")
     if not prompt or not m then return end
-    for _, b in ipairs(prompt.buttons or {}) do
+    for _, b in ipairs(view.hits) do
         if m.x >= b.x1 and m.x <= b.x2 and m.y >= b.y1 and m.y <= b.y2 then
-            if b.id == "update" then accept() elseif b.id == "later" then later() else skip() end
+            action(b.id)
             return
         end
     end
 end
+local function tab(delta)
+    local order={"later","skip","update","close"}
+    local at=1
+    for i,id in ipairs(order) do if id==prompt.focus then at=i end end
+    prompt.focus=order[(at-1+delta)%#order+1]
+    draw()
+end
+local function nothing() end
 
 local function show(rel, cur)
     mp.osd_message("", 0)                               -- clears "Checking for a newer CRT-mpv..."
-    prompt = { rel = rel, cur = cur, notes = note_lines(rel.notes or "", 5), was_paused = mp.get_property_bool("pause") }
-    mp.set_property_bool("pause", true)
-    mp.add_forced_key_binding("MBTN_LEFT", "crt-update-click", click)
-    mp.add_forced_key_binding("MBTN_LEFT_DBL", "crt-update-dbl", function() end)    -- no fullscreen toggle under it
-    mp.add_forced_key_binding("ENTER", "crt-update-enter", accept)
-    mp.add_forced_key_binding("KP_ENTER", "crt-update-kpenter", accept)
-    mp.add_forced_key_binding("ESC", "crt-update-esc", later)
-    mp.add_forced_key_binding("s", "crt-update-s", skip)
+    prompt = { rel = rel, cur = cur, notes = note_lines(rel.notes or "", 5), focus="update" }
+    modal:acquire()
+    local keys={
+        {"MBTN_LEFT",click},{"MBTN_LEFT_DBL",nothing},{"MBTN_RIGHT",nothing},
+        {"ENTER",function() action(prompt.focus) end},{"KP_ENTER",function() action(prompt.focus) end},
+        {"ESC",later},{"s",skip},{"TAB",function() tab(1) end},{"Shift+TAB",function() tab(-1) end},
+        {"LEFT",function() tab(-1) end},{"RIGHT",function() tab(1) end},
+        {"UP",nothing},{"DOWN",nothing},{"WHEEL_UP",nothing},{"WHEEL_DOWN",nothing},
+        {"SPACE",nothing},{"any_unicode",nothing},
+    }
+    for i,key in ipairs(keys) do
+        local name="crt-update-dialog-"..i
+        BINDINGS[#BINDINGS+1]=name
+        mp.add_forced_key_binding(key[1],name,key[2])
+    end
     draw()
 end
 
 mp.observe_property("mouse-pos", "native", function(_, m)
     if not prompt or not m then return end
     local id
-    for _, b in ipairs(prompt.buttons or {}) do
+    for _, b in ipairs(view.hits) do
         if m.x >= b.x1 and m.x <= b.x2 and m.y >= b.y1 and m.y <= b.y2 then id = b.id end
     end
     if id ~= prompt.hover then prompt.hover = id; draw() end
 end)
 mp.observe_property("osd-dimensions", "native", function() if prompt then draw() end end)
+mp.observe_property("window-minimized","bool",function() if prompt then draw() end end)
+mp.register_event("shutdown",function() if prompt then hide(false) end end)
 
 ---------------------------------------------------------------------------------------------------------------------
 

@@ -66,7 +66,7 @@ fi
 
 old="$(head -1 "$root/VERSION" 2>/dev/null | tr -d '[:space:]')"
 backup="$root/backup/${old:-old}-$(date +%Y%m%d-%H%M%S)"
-keep='^(config/settings\.json|config/update\.json|config/watch_later/|config/cache/|backup/|mpv/|\.cache/|CRT-mpv\.exe$|\.update-manifest$)'
+keep='^(config/settings\.json|config/update\.json|config/open-locations\.json|config/watch_later/|config/cache/|backup/|mpv/|\.cache/|CRT-mpv\.exe$|\.update-manifest$)'
 files="$(cd "$new" && find . -type f | sed 's|^\./||' | grep -Ev "$keep")"
 while IFS= read -r rel; do
     [ -n "$rel" ] || continue

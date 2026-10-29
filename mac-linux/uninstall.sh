@@ -54,7 +54,7 @@ for tv in G02_Generic_TV Generic_CRT_Monitor Generic_Flat_TV Generic_Gray_TV Gen
 done
 
 echo "[3/3] saved settings, resume positions, shader cache and logs"
-rm -rf config/settings.json config/update.json config/watch_later config/cache config/*.log ./*.log backup .update-manifest
+rm -rf config/settings.json config/open-locations.json config/update.json config/watch_later config/cache config/*.log ./*.log backup .update-manifest
 
 echo
 echo "Uninstalled. Delete this folder to remove CRT-mpv completely, or run mac-linux/install.sh to reinstall."

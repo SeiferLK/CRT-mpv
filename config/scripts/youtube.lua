@@ -1,6 +1,6 @@
 -- CRT-mpv YouTube link window.
 -- Opened from the YouTube button on the hover bar (ModernZ's screenshot button, patched by the installer) or
--- `script-message crt-youtube`. A panel in the remote's colours with a link field: paste or type a YouTube link and
+-- `script-message crt-youtube`. A shared CRT panel with a link field: paste or type a YouTube link and
 -- press Play (or Enter), and it plays on the TV like any other video (mpv's ytdl_hook fetches it with yt-dlp, which
 -- the installer puts in config/). Paste fills the field from the clipboard (Ctrl+V pastes too); Esc cancels.
 -- If the link cannot be played, the video that was playing comes back and the panel opens again with the link.
@@ -18,104 +18,58 @@ if deno then
     mp.set_property_native("ytdl-raw-options", raw)
 end
 
-local ov = mp.create_osd_overlay("ass-events")
-ov.z = 1000                                             -- above the remote
-local box = nil              -- the open panel: { text, error, hover, buttons, caret, was_paused }
-local pending = nil          -- a link that is loading: { url, prev, pos }
-local restore_pos = nil      -- where to put the previous video back to once it has loaded again
-local blink = nil
-
-local function hex(c)
-    local r, g, b = c:match("#(%x%x)(%x%x)(%x%x)")
-    return string.format("&H%s%s%s&", b, g, r)
-end
-
-local function rrect(x, y, w, h, r)
-    local x2, y2 = x + w, y + h
-    return string.format(
-        "m %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f "
-        .. "l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f",
-        x + r, y, x2 - r, y, x2, y, x2, y, x2, y + r, x2, y2 - r, x2, y2, x2, y2, x2 - r, y2,
-        x + r, y2, x, y2, x, y2, x, y2 - r, x, y + r, x, y, x, y, x + r, y)
-end
-
--- typed text shown as-is: braces would start ASS tags, and a backslash could form \N
-local function esc(s)
-    return (s:gsub("\\", "\\\226\129\160"):gsub("{", "\\{"):gsub("}", "\\}"))
-end
+package.path = mp.command_native({"expand-path","~~/script-modules/"}) .. "/?.lua;" .. package.path
+local view = require('crt_menu_view').new()
+local box, pending, restore_pos, blink
+local hide, show
+local modal = require('crt_modal').new("youtube",function() if box then hide(false) end end)
 
 local function draw()
-    if not box then ov:remove(); return end
-    local dim = mp.get_property_native("osd-dimensions") or {}
-    local W, H = dim.w or 0, dim.h or 0
-    if W <= 0 or H <= 0 then return end
-    local s = math.min(W / 1280, H / 720)
-    local out = {}
-    local function shape(path, fill, stroke, alpha, blur)
-        out[#out + 1] = string.format("{\\an7\\pos(0,0)\\1c%s\\3c%s\\bord%.1f\\shad0\\1a&H%02X&\\blur%.1f\\p1}%s",
-            hex(fill), hex(stroke or fill), stroke and 1.5 * s or 0, alpha or 0, blur or 0, path)
+    if not box then view:close(); return end
+    view:render_dialog({
+        id="youtube",title="Watch on YouTube",subtitle="Paste a video link to play it on your TV.",
+        input={text=box.text,cursor=box.cursor,all=box.all,caret=box.caret},
+        error=box.error,hover=box.hover,focus=box.focus,
+        buttons={{id="cancel",label="Cancel",width=94},{id="play",label="Play video",width=126,primary=true}},
+        hint="Enter  Play    Ctrl+V  Paste    Esc  Cancel",
+        suspended=mp.get_property_native("window-minimized")==true,
+    })
+end
+local function focus(id)
+    if not box then return end
+    box.focus,box.caret=id,true
+    if blink then blink:kill(); blink=nil end
+    if id=="field" then
+        blink=mp.add_periodic_timer(.53,function()
+            if box and not mp.get_property_native("window-minimized") then box.caret=not box.caret; draw() end
+        end)
     end
-    local function text(str, x, y, size, color, bold, an, clip)
-        out[#out + 1] = string.format("{\\an%d\\pos(%.1f,%.1f)%s\\fs%.1f\\1c%s\\bord0\\shad0\\b%d}%s",
-            an or 7, x, y, clip and string.format("\\clip(%.1f,%.1f,%.1f,%.1f)", table.unpack(clip)) or "",
-            size * s, hex(color), bold and 1 or 0, str)
-    end
-    local function button(id, label, x, y, w, h, primary)
-        local hov = box.hover == id
-        local fill = primary and (hov and "#ff9a52" or "#ff8232") or (hov and "#464652" or "#2d2d35")
-        shape(rrect(x, y + 3 * s, w, h, 12 * s), "#09090c")                            -- side wall
-        shape(rrect(x, y, w, h, 12 * s), fill, "#08080b")                               -- cap
-        text(label, x + w / 2, y + h / 2, 20, primary and "#140904" or "#e8e8ee", true, 5)
-        box.buttons[#box.buttons + 1] = { id = id, x1 = x, y1 = y, x2 = x + w, y2 = y + h }
-    end
-
-    local pw, ph = 640 * s, 292 * s
-    local px, py = (W - pw) / 2, (H - ph) / 2
-    box.buttons = {}
-    shape(rrect(0, 0, W, H, 0), "#000000", nil, 0x60)                                   -- dim the picture
-    shape(rrect(px - 6 * s, py + 4 * s, pw + 12 * s, ph + 12 * s, 26 * s), "#000000", nil, 0x50, 10 * s)   -- shadow
-    shape(rrect(px, py, pw, ph, 22 * s), "#151518", "#383840")                          -- the panel
-    text("Play a YouTube video", px + 30 * s, py + 26 * s, 30, "#ff8232", true)
-    text("Paste the link of a YouTube video. It plays on the TV like any other video.", px + 30 * s, py + 68 * s, 17, "#74747e")
-
-    -- the link field: a recessed slot, with the Paste button beside it
-    local fx, fy, fw, fh = px + 30 * s, py + 104 * s, pw - 194 * s, 46 * s
-    shape(rrect(fx, fy, fw, fh, 10 * s), "#0a0a0d", "#383840")
-    local caret = string.format("{\\1c%s\\1a&H%02X&}|", hex("#ff8232"), box.caret and 0 or 0xFF)
-    local clip = { fx, fy, fx + fw - 10 * s, fy + fh }
-    if box.text == "" then
-        text(caret .. "{\\1c" .. hex("#4a4a55") .. "\\1a&H00&}https://www.youtube.com/watch?v=...",
-            fx + 14 * s, fy + fh / 2, 20, "#e8e8ee", false, 4, clip)
-    else
-        -- the field cannot measure text, so a long link shows its end (about 0.52 em per character)
-        local fit = math.max(8, math.floor((fw - 34 * s) / (20 * s * 0.52)))
-        local shown = box.text
-        if #shown > fit then shown = "\226\128\166" .. shown:sub(-(fit - 1)):gsub("^[\128-\191]+", "") end
-        text(esc(shown) .. caret, fx + 14 * s, fy + fh / 2, 20, "#e8e8ee", false, 4, clip)
-    end
-    box.buttons[#box.buttons + 1] = { id = "field", x1 = fx, y1 = fy, x2 = fx + fw, y2 = fy + fh }
-    button("paste", "Paste", fx + fw + 14 * s, fy, 120 * s, fh)
-
-    if box.error then text(box.error, fx, py + 164 * s, 16, "#e0493b") end
-
-    local by, bh = py + ph - 100 * s, 46 * s
-    button("play", "Play", px + 30 * s, by, 150 * s, bh, true)
-    button("cancel", "Cancel", px + 194 * s, by, 130 * s, bh)
-    text("Enter: play     Ctrl+V: paste     Esc: cancel", px + pw - 26 * s, py + ph - 24 * s, 13, "#74747e", false, 3)
-
-    ov.res_x, ov.res_y = W, H
-    ov.data = table.concat(out, "\n")
-    ov:update()
+    draw()
+end
+local function previous(text,pos)
+    if pos<=0 then return 0 end
+    local before=text:sub(1,pos):gsub("[\1-\127\194-\244][\128-\191]*$","")
+    return #before
+end
+local function following(text,pos)
+    if pos>=#text then return #text end
+    local char=text:sub(pos+1):match("^[\1-\127\194-\244][\128-\191]*")
+    return pos+#(char or "")
 end
 
-local function set_text(t)
-    box.text, box.error, box.caret = t, nil, true
-    draw()
+local function set_text(t,cursor)
+    box.text, box.error, box.caret, box.all = t, nil, true, false
+    box.cursor=cursor or #t
+    focus("field")
 end
 
 local function insert(t)
     t = t:gsub("%c", "")                                -- no line breaks or other control characters
-    if t ~= "" then set_text(box.text .. t) end
+    if t ~= "" then
+        if box.all then box.text,box.cursor="",0 end
+        if #box.text+#t>4096 then box.error="This link is too long."; draw(); return end
+        set_text(box.text:sub(1,box.cursor)..t..box.text:sub(box.cursor+1),box.cursor+#t)
+    end
 end
 
 -- the clipboard as text: mpv's clipboard property (mpv 0.40+), else the system's own tool
@@ -134,11 +88,12 @@ end
 
 -- the Paste button replaces what is in the field; Ctrl+V adds to it, like typing
 local function paste(replace)
+    local target=box
     read_clipboard(function(t)
-        if not box then return end
+        if not box or box~=target then return end
         t = ((t or ""):gsub("^%s+", ""):match("^[^\r\n]*") or ""):gsub("%s+$", "")
         if t == "" then box.error = "The clipboard has no text in it. Copy the video's link first."; draw(); return end
-        if replace then box.text = "" end
+        if replace then box.text,box.cursor = "",0 end
         insert(t)
     end)
 end
@@ -159,8 +114,6 @@ local function current_file()
     return utils.join_path(mp.get_property("working-directory") or "", path)
 end
 
-local hide, show
-
 local function submit()
     if not box then return end
     local url, err = link(box.text)
@@ -173,59 +126,89 @@ local function submit()
     mp.set_property_bool("pause", false)
 end
 
+local function action(id)
+    if id=="play" then submit()
+    elseif id=="paste" then paste(true)
+    elseif id=="cancel" or id=="close" then hide(true)
+    elseif id=="field" then focus("field") end
+end
 local function click()
     local m = mp.get_property_native("mouse-pos")
     if not box or not m then return end
-    for _, b in ipairs(box.buttons or {}) do
+    for _, b in ipairs(view.hits) do
         if m.x >= b.x1 and m.x <= b.x2 and m.y >= b.y1 and m.y <= b.y2 then
-            if b.id == "play" then submit() elseif b.id == "paste" then paste(true) elseif b.id == "cancel" then hide(true) end
+            action(b.id)
             return
         end
     end
 end
 
 local function nothing() end
+local function tab(delta)
+    local order={"field","paste","cancel","play","close"}
+    local at=1
+    for i,id in ipairs(order) do if id==box.focus then at=i end end
+    focus(order[(at-1+delta)%#order+1])
+end
+local function erase(forward)
+    if box.all then set_text(""); return end
+    local pos=box.cursor
+    if forward then set_text(box.text:sub(1,pos)..box.text:sub(following(box.text,pos)+1),pos)
+    else
+        local prior=previous(box.text,pos)
+        set_text(box.text:sub(1,prior)..box.text:sub(pos+1),prior)
+    end
+end
+local function enter() if box.focus=="field" then submit() else action(box.focus) end end
 local KEYS = {
     { "MBTN_LEFT", click }, { "MBTN_LEFT_DBL", nothing },          -- no fullscreen toggle under the panel
-    { "ENTER", submit }, { "KP_ENTER", submit }, { "ESC", function() hide(true) end },
+    { "ENTER", enter }, { "KP_ENTER", enter }, { "ESC", function() hide(true) end },
     { "Ctrl+v", function() paste(false) end }, { "Shift+INS", function() paste(false) end },
-    { "BS", function() set_text((box.text:gsub("[\1-\127\194-\244][\128-\191]*$", ""))) end, { repeatable = true } },
+    { "BS", function() erase(false) end, { repeatable = true } },
+    { "DEL", function() erase(true) end, { repeatable = true } },
+    { "Ctrl+a", function() box.all=true; focus("field") end },
     { "Ctrl+BS", function() set_text("") end },
     -- typed characters go into the field, not to the player's own keys
     { "any_unicode", function(e) if e.event ~= "up" and e.key_text then insert(e.key_text) end end,
       { complex = true, repeatable = true } },
     -- keys that would otherwise seek or skip behind the panel
-    { "LEFT", nothing }, { "RIGHT", nothing }, { "UP", nothing }, { "DOWN", nothing },
-    { "HOME", nothing }, { "END", nothing }, { "PGUP", nothing }, { "PGDWN", nothing }, { "DEL", nothing }, { "TAB", nothing },
+    { "LEFT", function() box.cursor=box.all and 0 or previous(box.text,box.cursor); box.all=false; focus("field") end, {repeatable=true} },
+    { "RIGHT", function() box.cursor=box.all and #box.text or following(box.text,box.cursor); box.all=false; focus("field") end, {repeatable=true} },
+    { "HOME", function() box.cursor=0; box.all=false; focus("field") end },
+    { "END", function() box.cursor=#box.text; box.all=false; focus("field") end },
+    { "UP", nothing }, { "DOWN", nothing }, { "PGUP", nothing }, { "PGDWN", nothing },
+    { "WHEEL_UP", nothing }, { "WHEEL_DOWN", nothing }, { "MBTN_RIGHT", nothing },
+    { "TAB", function() tab(1) end }, { "Shift+TAB", function() tab(-1) end },
 }
 
 hide = function(resume)
     if not box then return end
-    if resume and not box.was_paused then mp.set_property_bool("pause", false) end
     box = nil
     if blink then blink:kill(); blink = nil end
     for i = 1, #KEYS do mp.remove_key_binding("crt-youtube-" .. i) end
+    modal:release(resume)
     draw()
 end
 
 show = function(text, err)
     if box then return end
-    box = { text = text or "", error = err, caret = true, was_paused = mp.get_property_bool("pause") }
-    mp.set_property_bool("pause", true)
+    box = { text = text or "", cursor=#(text or ""), error = err, caret = true, focus="field" }
+    modal:acquire()
     for i, k in ipairs(KEYS) do mp.add_forced_key_binding(k[1], "crt-youtube-" .. i, k[2], k[3]) end
-    blink = mp.add_periodic_timer(0.53, function() box.caret = not box.caret; draw() end)
-    draw()
+    focus("field")
 end
 
 mp.observe_property("mouse-pos", "native", function(_, m)
     if not box or not m then return end
     local id
-    for _, b in ipairs(box.buttons or {}) do
+    for _, b in ipairs(view.hits) do
         if b.id ~= "field" and m.x >= b.x1 and m.x <= b.x2 and m.y >= b.y1 and m.y <= b.y2 then id = b.id end
     end
     if id ~= box.hover then box.hover = id; draw() end
 end)
 mp.observe_property("osd-dimensions", "native", function() if box then draw() end end)
+mp.observe_property("window-minimized","bool",function() if box then draw() end end)
+mp.register_event("shutdown",function() if box then hide(false) end end)
 
 mp.register_event("file-loaded", function()
     if restore_pos then mp.commandv("seek", restore_pos, "absolute"); restore_pos = nil end
@@ -246,4 +229,4 @@ mp.register_event("end-file", function(e)
     show(p.url, "That video could not be played. Check the link, or try again later.")
 end)
 
-mp.register_script_message("crt-youtube", function() show() end)
+mp.register_script_message("crt-youtube", function(url) show(url) end)
